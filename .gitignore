@@ -1,0 +1,17 @@
+# Entorno virtual
+env/
+venv/
+__pycache__/
+*.pyc
+
+# Archivos de usuario
+*.sqlite3
+*.log
+
+# Archivos de configuración
+.env
+
+# Archivos de Django
+db.sqlite3
+media/
+staticfiles/
