@@ -37,9 +37,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+
     'rest_framework',  # API (futuro)
-    'core',            # Nuestra app base
+    'usuarios',            # Nuestra app base
+    'core_inmobiliario', #App que administra todos los modelos base que son comunes a todos los modulos: cliente propiedades, etc.
 ]
 
 MIDDLEWARE = [
