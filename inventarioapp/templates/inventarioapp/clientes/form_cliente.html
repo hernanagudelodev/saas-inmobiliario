@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{% if actualizar %}Actualizar{% else %}Crear{% endif %} Cliente{% endblock %}
+
+{% block content %}
+<div class="card mx-auto" style="max-width:600px;">
+  <div class="card-header bg-primary text-white">
+    <h3 class="mb-0">
+      {% if actualizar %}
+        <i class="bi bi-pencil"></i> Actualizar Cliente
+      {% else %}
+        <i class="bi bi-person-plus"></i> Crear Cliente
+      {% endif %}
+    </h3>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="mb-3">
+          <label for="{{ field.id_for_label }}" class="form-label fw-bold">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}
+            <div class="form-text">{{ field.help_text }}</div>
+          {% endif %}
+          {% if field.errors %}
+            <div class="text-danger small">{{ field.errors }}</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-success">
+        {% if actualizar %}Actualizar Cliente{% else %}Crear Cliente{% endif %}
+      </button>
+      <a href="{% url 'inventarioapp:lista_clientes' %}" class="btn btn-link ms-2">
+        <i class="bi bi-arrow-left"></i> Volver a la lista de Clientes
+      </a>
+    </form>
+  </div>
+</div>
+{% endblock %}

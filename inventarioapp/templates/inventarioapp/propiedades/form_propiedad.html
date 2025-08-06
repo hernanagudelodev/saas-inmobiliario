@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if actualizar %}Actualizar{% else %}Crear{% endif %} Propiedad
+{% endblock %}
+
+{% block content %}
+<div class="card mx-auto" style="max-width:600px;">
+  <div class="card-header bg-primary text-white">
+    <h3 class="mb-0">
+      {% if actualizar %}
+        <i class="bi bi-pencil"></i> Actualizar Propiedad
+      {% else %}
+        <i class="bi bi-house-add"></i> Crear Propiedad
+      {% endif %}
+    </h3>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="mb-3 {% if field.field.widget.input_type == 'hidden' %}d-none{% endif %}">
+          <label for="{{ field.id_for_label }}" class="form-label fw-bold">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}
+            <div class="form-text">{{ field.help_text }}</div>
+          {% endif %}
+          {% if field.errors %}
+            <div class="text-danger small">{{ field.errors }}</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+      
+      <!-- Mapa responsive -->
+      <div class="mb-3">
+        <label class="form-label fw-bold">Ubicación en el Mapa</label>
+        <div id="map" style="width: 100%; min-height: 250px; height: 35vw; max-height: 400px; border-radius: 12px; box-shadow: 0 2px 8px #0002;"></div>
+        <!-- Inputs ocultos para lat/lng -->
+      </div>
+
+      <button type="submit" class="btn btn-success">
+        {% if actualizar %}Actualizar Propiedad{% else %}Crear Propiedad{% endif %}
+      </button>
+      <a href="{% url 'inventarioapp:lista_propiedades' %}" class="btn btn-link ms-2">
+        <i class="bi bi-arrow-left"></i> Volver a la lista de Propiedades
+      </a>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <!-- Leaflet assets -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    @media (max-width: 600px) {
+      #map { min-height: 180px; height: 45vw; max-height: 260px; }
+    }
+  </style>
+  <script>
+  document.addEventListener("DOMContentLoaded", function() {
+      var latInput = document.getElementById('id_latitude');
+      var lngInput = document.getElementById('id_longitude');
+      var lat = parseFloat(latInput.value);
+      var lng = parseFloat(lngInput.value);
+      console.log(lat);
+      console.log(lng);
+      var map, marker;
+
+      function initMap(centerLat, centerLng) {
+          map = L.map('map').setView([centerLat, centerLng], 15);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '© OpenStreetMap contributors'
+          }).addTo(map);
+
+          marker = L.marker([centerLat, centerLng], {draggable: true}).addTo(map);
+
+          marker.on('dragend', function(e) {
+              var latlng = marker.getLatLng();
+              latInput.value = latlng.lat.toFixed(6);
+              lngInput.value = latlng.lng.toFixed(6);
+          });
+
+          map.on('click', function(e) {
+              marker.setLatLng(e.latlng);
+              latInput.value = e.latlng.lat.toFixed(6);
+              lngInput.value = e.latlng.lng.toFixed(6);
+          });
+      }
+
+      if (!isNaN(lat) && !isNaN(lng)) {
+          // Si ya hay lat/lng guardados, centramos ahí
+          initMap(lat, lng);
+      } else if (navigator.geolocation) {
+          // Si no hay lat/lng, intentamos obtener la ubicación del navegador
+          navigator.geolocation.getCurrentPosition(
+              function(position) {
+                  lat = position.coords.latitude;
+                  lng = position.coords.longitude;
+                  latInput.value = lat.toFixed(6);
+                  lngInput.value = lng.toFixed(6);
+                  initMap(lat, lng);
+              },
+              function(error) {
+                  // Si el usuario no permite, fallback a Bogotá
+                  lat = 4.710989;
+                  lng = -74.072092;
+                  latInput.value = lat;
+                  lngInput.value = lng;
+                  initMap(lat, lng);
+              }
+          );
+      } else {
+          // Si el navegador no soporta geolocalización
+          lat = 4.710989;
+          lng = -74.072092;
+          latInput.value = lat;
+          lngInput.value = lng;
+          initMap(lat, lng);
+      }
+  });
+  </script>
+{% endblock %}

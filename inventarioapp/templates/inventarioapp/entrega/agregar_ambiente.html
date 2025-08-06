@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Formulario de Entrega - Paso 2{% endblock %}
+
+{% block content %}
+<div class="card mx-auto" style="max-width:720px;">
+  <div class="card-header bg-primary text-white">
+    <h3 class="mb-0">
+      <i class="bi bi-houses"></i> Entrega para {{ entrega.propiedad_cliente.propiedad }}
+    </h3>
+  </div>
+  <div class="card-body">
+    <h5 class="mb-3">Agregar Ambiente</h5>
+    <form method="post" novalidate class="mb-4">
+      {% csrf_token %}
+      <div class="row">
+        {% for field in form %}
+          <div class="col-md-4 mb-3">
+            <label for="{{ field.id_for_label }}" class="form-label fw-bold">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+              <div class="text-danger small">{{ field.errors }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Agregar
+      </button>
+    </form>
+
+    <h5 class="mb-3">Ambientes agregados</h5>
+    {% if ambientes %}
+      <div class="list-group mb-4">
+        {% for amb in ambientes %}
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <span class="fw-bold">{{ amb.get_tipo_ambiente_display }}</span>
+              {% if amb.numero_ambiente %} #{{ amb.numero_ambiente }}{% endif %}
+              {% if amb.nombre_personalizado %} - {{ amb.nombre_personalizado }}{% endif %}
+            </div>
+            <div>
+              <a href="{% url 'inventarioapp:editar_items_ambiente' amb.id %}" class="btn btn-outline-primary btn-sm me-1">Editar Ítems</a>
+              <a href="{% url 'inventarioapp:editar_ambiente' amb.id %}" class="btn btn-outline-secondary btn-sm me-1">Editar Ambiente</a>
+              <a href="{% url 'inventarioapp:eliminar_ambiente' amb.id %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-info">Aún no se han agregado ambientes.</div>
+    {% endif %}
+
+    <a href="{% url 'inventarioapp:resumen_formulario_entrega' entrega.id %}" class="btn btn-link ps-0">
+      <i class="bi bi-file-earmark-text"></i> Ver Resumen del Formulario
+    </a>
+  </div>
+</div>
+{% endblock %}

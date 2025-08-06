@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Borrar Cliente{% endblock %}
+{% block content %}
+
+<h1>Borrar Cliente</h1>
+
+<p>Esta seguro de borrar el cliente: {{ cliente }}?</p>
+
+<form action="" method="POST">
+  {% csrf_token %}
+  <input type="submit" value="Si, borrar.">
+  <input type="submit" onclick="window.location='{% url 'inventarioapp:lista_clientes' %}' ; return false;" value="Cancel">
+</form>
+
+{% endblock %}

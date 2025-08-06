@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Formulario de Captación - Seleccionar cliente{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 600px;">
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-primary text-white">
+      <h4 class="mb-0">
+        <i class="bi bi-person-check"></i> Selecciona el cliente para la captación de
+        <span class="fw-bold">{{ propiedad.direccion }}</span>
+      </h4>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="selectCliente" class="form-label fw-bold">Cliente asociado</label>
+          <select id="selectCliente" name="relacion_id" class="form-select" required>
+            {% for rel in relaciones %}
+              <option value="{{ rel.id }}">
+                {{ rel.cliente }} ({{ rel.get_relacion_display }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-success me-2">
+          <i class="bi bi-arrow-right"></i> Continuar
+        </button>
+        <a href="{% url 'inventarioapp:detalle_propiedad' propiedad.id %}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left"></i> Volver a la propiedad
+        </a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

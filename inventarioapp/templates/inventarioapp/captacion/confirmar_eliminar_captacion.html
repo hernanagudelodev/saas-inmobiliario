@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Eliminar Captación{% endblock %}
+{% block content %}
+  <h2>¿Estás seguro de que deseas eliminar esta captación?</h2>
+  <p><strong>Propiedad:</strong> {{ captacion.propiedad }}</p>
+  <p><strong>Cliente:</strong> {{ captacion.cliente }}</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+    <a href="{% url 'inventarioapp:detalle_propiedad' propiedad_id %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+{% endblock %}

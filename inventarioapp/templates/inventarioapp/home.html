@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-4 mb-4">
+  <!-- Estadística 1 -->
+  <div class="col-md-3 col-6">
+    <div class="card text-center shadow-sm">
+      <div class="card-body">
+        <i class="bi bi-building fs-2 text-primary"></i>
+        <h6 class="card-title mt-2">Propiedades</h6>
+        <h3>{{ estadisticas.total_propiedades }}</h3>
+        <a href="{% url 'inventarioapp:lista_propiedades' %}" class="stretched-link"></a>
+      </div>
+    </div>
+  </div>
+  <!-- Estadística 2 -->
+  <div class="col-md-3 col-6">
+    <div class="card text-center shadow-sm">
+      <div class="card-body">
+        <i class="bi bi-people fs-2 text-success"></i>
+        <h6 class="card-title mt-2">Clientes</h6>
+        <h3>{{ estadisticas.total_clientes }}</h3>
+        <a href="{% url 'inventarioapp:lista_clientes' %}" class="stretched-link"></a>
+      </div>
+    </div>
+  </div>
+  <!-- Card Captaciones y Entregas (doble ancho) -->
+  <div class="col-md-6 col-12">
+    <div class="card text-center shadow-sm h-100">
+      <div class="card-body">
+        <i class="bi bi-calendar-event fs-2 text-info"></i>
+        <h6 class="card-title mt-2">Captaciones y Entregas de {{ estadisticas.nombre_mes|capfirst }}</h6>
+        <div class="d-flex justify-content-center align-items-center mt-3 gap-5 flex-wrap">
+          <div>
+            <span class="text-muted small">Captaciones</span>
+            <div class="fw-bold text-primary" style="font-size: 2em;">{{ estadisticas.captaciones_mes }}</div>
+          </div>
+          <div>
+            <span class="text-muted small">Entregas</span>
+            <div class="fw-bold text-success" style="font-size: 2em;">{{ estadisticas.entregas_mes }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-pencil-square"></i> Captaciones pendientes de firma
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for cap in captaciones_pendientes %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <span class="fw-bold">{{ cap.propiedad_cliente.propiedad }}</span>
+              <br>
+              <small>Cliente: {{ cap.propiedad_cliente.cliente }}</small>
+            </div>
+            <a href="{% url 'inventarioapp:resumen_formulario_captacion' cap.id %}" class="btn btn-outline-primary btn-sm">
+              Revisar
+            </a>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">No hay captaciones pendientes.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-clipboard-x"></i> Entregas pendientes de firma
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for ent in entregas_pendientes %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <span class="fw-bold">{{ ent.propiedad_cliente.propiedad }}</span>
+              <br>
+              <small>Cliente: {{ ent.propiedad_cliente.cliente }}</small>
+            </div>
+            <a href="{% url 'inventarioapp:resumen_formulario_entrega' ent.id %}" class="btn btn-outline-success btn-sm">
+              Revisar
+            </a>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">No hay entregas pendientes.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-lg-8">
+    <!-- Aquí puedes poner un gráfico de Chart.js con resumen de propiedades por estado, entregas del mes, etc. -->
+    {{ captaciones_labels|json_script:"captaciones-labels" }}
+    {{ captaciones_data|json_script:"captaciones-data" }}
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="bi bi-graph-up"></i> Captaciones últimos 6 meses
+      </div>
+      <div class="card-body">
+        <canvas id="captacionesChart" height="110"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <!-- Accesos rápidos o notificaciones -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="bi bi-lightning"></i> Accesos rápidos
+      </div>
+      <div class="card-body">
+        <a href="{% url 'inventarioapp:crear_cliente' %}" class="btn btn-outline-primary mb-2 w-100">
+          <i class="bi bi-file-earmark-plus"></i> Crear Cliente
+        </a>
+        <a href="{% url 'inventarioapp:crear_propiedad' %}" class="btn btn-outline-success mb-2 w-100">
+          <i class="bi bi-file-earmark-plus"></i> Crear Propiedad
+        </a>
+        <!-- Más acciones rápidas -->
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const labels = JSON.parse(document.getElementById('captaciones-labels').textContent);
+    const data = JSON.parse(document.getElementById('captaciones-data').textContent);
+    const ctx = document.getElementById('captacionesChart').getContext('2d');
+    const captacionesChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Captaciones',
+          data: data,
+          fill: false,
+          borderColor: '#007bff',
+          backgroundColor: '#007bff',
+          tension: 0.1,
+          pointRadius: 5,
+          pointBackgroundColor: '#007bff'
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: { beginAtZero: true, stepSize: 1 }
+        }
+      }
+    });
+  </script>
+{% endblock %}

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Formulario de Entrega – Paso 3{% endblock %}
+
+{% block content %}
+<div class="card mx-auto" style="max-width:1200px;">
+  <div class="card-header bg-primary text-white">
+    <h3 class="mb-0"><i class="bi bi-pencil-square"></i> Editar Ítems – {{ ambiente }}</h3>
+  </div>
+
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {{ formset.management_form }}
+
+      {# ---------- Tabla (≥ md) ---------- #}
+      <div class="d-none d-md-block table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Nombre ítem</th><th>Estado</th><th>Cantidad</th>
+              <th>Material</th><th>Observaciones</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for form in formset %}
+            <tr class="fila-form">
+              {{ form.id }}
+              {% for field in form.visible_fields %}
+              <td class="campo-desktop">
+                {% if field.errors %}
+                  <div class="text-danger small">{{ field.errors }}</div>
+                {% endif %}
+                {{ field }}
+              </td>
+              {% endfor %}
+              <td class="campo-desktop">
+                {% if form.instance.id %}
+                  <a href="{% url 'inventarioapp:eliminar_item' form.instance.id %}"
+                     class="btn btn-sm btn-outline-danger">Eliminar</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {# ---------- Cards móviles (< md) ---------- #}
+      <div class="d-md-none">
+        {% for form in formset %}
+        <div class="card mb-3 fila-form">
+          <div class="card-body p-2">
+            {{ form.id }}
+            {% for field in form.visible_fields %}
+            <div class="mb-2 campo-mobile">
+              <label class="form-label fw-bold small">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}
+                <div class="text-danger small">{{ field.errors }}</div>
+              {% endif %}
+            </div>
+            {% endfor %}
+            {% if form.instance.id %}
+              <a href="{% url 'inventarioapp:eliminar_item' form.instance.id %}"
+                 class="btn btn-sm btn-outline-danger mt-2 campo-mobile">Eliminar</a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <button type="button" id="add-item" class="btn btn-outline-primary me-2">
+        <i class="bi bi-plus-lg"></i> Añadir ítem
+      </button>
+
+      <button type="submit" class="btn btn-success">
+        <i class="bi bi-check-lg"></i> Guardar Ítems
+      </button>
+
+      <a href="{% url 'inventarioapp:agregar_ambiente' ambiente.formulario_entrega.id %}"
+         class="btn btn-link ms-2">
+        <i class="bi bi-arrow-left"></i> Volver
+      </a>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ---------- Habilita solo los campos visibles (evita duplicados) ---------- */
+function toggleInputs() {
+  const wide = window.innerWidth >= 768;           // ≥ md
+  document.querySelectorAll('.campo-desktop input, .campo-desktop select, .campo-desktop textarea')
+          .forEach(el => el.disabled = !wide);
+  document.querySelectorAll('.campo-mobile  input, .campo-mobile  select, .campo-mobile  textarea')
+          .forEach(el => el.disabled =  wide);
+}
+window.addEventListener('load',   toggleInputs);
+window.addEventListener('resize', toggleInputs);
+
+/* ---------- Añadir fila vacía ---------- */
+document.getElementById('add-item').addEventListener('click', () => {
+
+  const totalInput  = document.querySelector('input[name$="-TOTAL_FORMS"]');
+  const prefix      = totalInput.name.split('-')[0];      // "items"
+  const total       = parseInt(totalInput.value, 10);
+
+  /* plantilla = última fila existente (índice total-1) */
+  const lastRow = document.querySelector(
+    `[name="${prefix}-${total-1}-nombre_item"]`
+  ).closest('.fila-form');
+  const newRow  = lastRow.cloneNode(true);
+
+  /* sustituye índices y limpia valores */
+  const regex = new RegExp(`${prefix}-${total-1}-`, 'g');
+  newRow.innerHTML = newRow.innerHTML.replace(regex, `${prefix}-${total}-`);
+  newRow.querySelectorAll('input, textarea, select').forEach(el => el.value = '');
+  const hiddenId = newRow.querySelector(`input[name="${prefix}-${total}-id"]`);
+  if (hiddenId) hiddenId.value = '';
+
+  /* inserta según viewport */
+  lastRow.parentNode.appendChild(newRow);
+
+  /* actualiza TOTAL_FORMS y vuelve a aplicar toggleInputs */
+  totalInput.value = total + 1;
+  toggleInputs();
+});
+</script>
+{% endblock %}

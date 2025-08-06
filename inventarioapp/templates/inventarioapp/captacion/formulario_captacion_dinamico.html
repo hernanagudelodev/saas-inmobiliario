@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% block title %}
+  {% if modo_edicion %}
+    Editar Captación para: {{ relacion.propiedad }} / {{ relacion.cliente }}
+  {% else %}
+    Nueva Captación para: {{ relacion.propiedad }} / {{ relacion.cliente }}
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 700px;">
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-primary text-white">
+      <h4 class="mb-0">
+        {% if modo_edicion %}
+          <i class="bi bi-pencil-square"></i> Editar Captación
+        {% else %}
+          <i class="bi bi-file-earmark-plus"></i> Nueva Captación
+        {% endif %}
+        <span class="fw-normal">para: <span class="fw-bold">{{ relacion.propiedad }}</span> / <span class="fw-bold">{{ relacion.cliente }}</span></span>
+      </h4>
+    </div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">{{ form.tipo_captacion.label }}</label>
+          {{ form.tipo_captacion|add_class:"form-select" }}
+          {% if form.tipo_captacion.errors %}
+            <div class="text-danger small">{{ form.tipo_captacion.errors }}</div>
+          {% endif %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">{{ form.observaciones_generales.label }}</label>
+          {{ form.observaciones_generales|add_class:"form-control" }}
+          {% if form.observaciones_generales.errors %}
+            <div class="text-danger small">{{ form.observaciones_generales.errors }}</div>
+          {% endif %}
+        </div>
+
+        {% for seccion in secciones_fields %}
+          <fieldset class="mb-4 border rounded p-3">
+            <legend class="fs-6 fw-bold mb-3">{{ seccion.nombre }}</legend>
+            <div class="row">
+              {% for field in seccion.campos %}
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">{{ field.label }}</label>
+                  {% if field.field.widget.input_type == "checkbox" %}
+                    <div class="form-check">
+                      {{ field|add_class:"form-check-input" }}
+                    </div>
+                  {% else %}
+                    {{ field|add_class:"form-control" }}
+                  {% endif %}
+                  {% if field.errors %}
+                    <div class="text-danger small">{{ field.errors }}</div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </fieldset>
+        {% endfor %}
+
+        <button type="submit" class="btn btn-success">
+          {% if modo_edicion %}Guardar Cambios{% else %}Guardar Captación{% endif %}
+        </button>
+        <a href="{% url 'inventarioapp:detalle_propiedad' relacion.propiedad.id %}" class="btn btn-link ms-2">
+          <i class="bi bi-arrow-left"></i> Cancelar
+        </a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

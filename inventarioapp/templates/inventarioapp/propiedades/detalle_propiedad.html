@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de Propiedad{% endblock %}
+
+{% block content %}
+  <h1>Detalle de la propiedad {{ propiedad.direccion }}</h1>
+  {% if propiedad %}
+    <div>
+        Dirección: {{ propiedad.direccion }}
+    </div>
+    <div>
+        Ciudad: {{ propiedad.ciudad }}
+    </div>
+    <div>
+        Tipo de Propiedad{{ propiedad.tipo_propiedad }}
+    </div>
+    <div>
+        Matricula Inmobiliaria {{ propiedad.matricula_inmobiliaria }}
+    </div>
+    <div>Clientes:
+        {% for cliente in propiedad.clientes.all %}
+            {{ cliente }} {% if not forloop.last %}/{% endif %}
+        {% empty %}
+            Esta propiedad no tiene clientes
+        {% endfor %}
+    </div>
+    <div>
+        <a href="{% url 'inventarioapp:actualizar_propiedad' propiedad.id %}">Actualizar</a> 
+        <a href="#">Eliminar</a> 
+        {% for captacion in captaciones %}
+            <a href="{% url 'inventarioapp:crear_captacion' propiedad.id %}">Ver Captación</a>
+        {% empty %}
+            Esta propiedad no tiene Captación 
+            <a href="{% url 'inventarioapp:crear_captacion' propiedad.id %}">Nueva Captación</a>
+        {% endfor %}
+    </div>
+  {% else %}
+    <p>No hay propiedades creadas</p>
+  {% endif %}
+  <p><a href="{% url 'inventarioapp:crear_propiedad' %}">Crear una Propiedad</a></p>
+{% endblock %}

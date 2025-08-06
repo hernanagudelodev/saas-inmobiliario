@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Formulario de Entrega - Paso 1{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:600px;">
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-primary text-white">
+      <h3 class="mb-0"><i class="bi bi-clipboard-plus"></i> Crear Entrega - Paso 1</h3>
+    </div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% for field in form %}
+          <div class="mb-3 {% if field.field.widget.input_type == 'hidden' %}d-none{% endif %}">
+            <label for="{{ field.id_for_label }}" class="form-label fw-bold">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+              <div class="text-danger small">{{ field.errors }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-success">
+          <i class="bi bi-arrow-right-circle"></i> Crear y continuar
+        </button>
+        <a href="{% url 'inventarioapp:detalle_propiedad' propiedad.id %}" class="btn btn-link ms-2">
+          <i class="bi bi-arrow-left"></i> Cancelar
+        </a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

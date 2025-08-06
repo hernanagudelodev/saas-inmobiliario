@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmar Envío de Formulario{% endblock %}
+
+{% block content %}
+  <h2>Confirmar Envío</h2>
+
+  <form method="post">
+    {% csrf_token %}
+    <label for="correo">Correo electrónico del cliente:</label>
+    <input type="email" name="correo" id="correo" value="{{ cliente_email }}" required>
+    <br><br>
+    <button type="submit" class="btn btn-success">Sí, enviar ahora</button>
+    <a href="{% url 'inventarioapp:resumen_formulario_entrega' entrega.id %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+{% endblock %}

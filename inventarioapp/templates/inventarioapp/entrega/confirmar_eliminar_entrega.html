@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Confirmar eliminación de entrega{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 500px;">
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-danger text-white">
+      <h4 class="mb-0"><i class="bi bi-trash"></i> Confirmar eliminación</h4>
+    </div>
+    <div class="card-body">
+      <p>¿Estás seguro de que deseas eliminar este formulario de entrega en borrador para la propiedad <strong>{{ propiedad.direccion }}</strong> y cliente <strong>{{ entrega.propiedad_cliente.cliente }}</strong>?<br>
+      Esta acción no se puede deshacer.</p>
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger me-2">
+          <i class="bi bi-trash"></i> Sí, eliminar
+        </button>
+        <a href="{% url 'inventarioapp:detalle_propiedad' propiedad.id %}" class="btn btn-outline-secondary">
+          Cancelar
+        </a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

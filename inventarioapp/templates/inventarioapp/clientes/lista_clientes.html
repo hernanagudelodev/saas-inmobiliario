@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container" style="max-width: 900px;">
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-primary text-white">
+      <h4 class="mb-0"><i class="bi bi-people"></i> Lista de clientes</h4>
+    </div>
+    <div class="card-body">
+
+      <!-- Buscador -->
+      <form method="get" class="d-flex mb-3 gap-2">
+        <input type="text" name="q" class="form-control" style="max-width:260px;" placeholder="Buscar..." value="{{ q }}">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-search"></i> Buscar
+        </button>
+        {% if q %}
+          <a href="{% url 'inventarioapp:lista_clientes' %}" class="btn btn-outline-secondary">
+            Limpiar búsqueda
+          </a>
+        {% endif %}
+      </form>
+
+      <!-- Tabla responsive solo en md+ -->
+      <div class="table-responsive d-none d-md-block">
+        <table class="table table-striped align-middle">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Identificación</th>
+              <th>Teléfono</th>
+              <th>Email</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cliente in clientes %}
+              <tr>
+                <td>
+                  <a href="{% url 'inventarioapp:detalle_cliente' cliente.id %}" class="fw-bold link-primary">{{ cliente.nombre }}</a>
+                </td>
+                <td>{{ cliente.identificacion }}</td>
+                <td>{{ cliente.telefono|default:"–" }}</td>
+                <td>{{ cliente.email|default:"–" }}</td>
+                <td>
+                  <a href="{% url 'inventarioapp:actualizar_cliente' cliente.id %}" class="btn btn-sm btn-outline-secondary me-1">Actualizar</a>
+                  <a href="{% url 'inventarioapp:eliminar_cliente' cliente.id %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5" class="text-center text-muted">No hay clientes.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Cards para móvil: solo visible en sm -->
+      <div class="d-block d-md-none">
+        {% for cliente in clientes %}
+          <div class="card mb-3">
+            <div class="card-body pb-2">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <a href="{% url 'inventarioapp:detalle_cliente' cliente.id %}" class="fw-bold link-primary fs-6">
+                    {{ cliente.nombre }}
+                  </a>
+                  <div class="small text-muted">ID: {{ cliente.identificacion }}</div>
+                  <div class="small">Tel: <b>{{ cliente.telefono|default:"–" }}</b></div>
+                  <div class="small">Email: <b>{{ cliente.email|default:"–" }}</b></div>
+                </div>
+                <div class="d-flex flex-column align-items-end ms-2">
+                  <a href="{% url 'inventarioapp:actualizar_cliente' cliente.id %}" class="btn btn-sm btn-outline-secondary mb-1">Actualizar</a>
+                  <a href="{% url 'inventarioapp:eliminar_cliente' cliente.id %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div class="text-muted text-center">No hay clientes.</div>
+        {% endfor %}
+      </div>
+
+      <!-- Paginación Bootstrap -->
+      <nav aria-label="Paginación de clientes">
+        <ul class="pagination justify-content-center">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?q={{ q }}&page={{ page_obj.previous_page_number }}" aria-label="Anterior">&laquo;</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">&laquo;</span>
+            </li>
+          {% endif %}
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+              <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+              <li class="page-item"><a class="page-link" href="?q={{ q }}&page={{ num }}">{{ num }}</a></li>
+            {% endif %}
+          {% endfor %}
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?q={{ q }}&page={{ page_obj.next_page_number }}" aria-label="Siguiente">&raquo;</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">&raquo;</span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      <a href="{% url 'inventarioapp:crear_cliente' %}" class="btn btn-success mt-2">Crear un Cliente</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

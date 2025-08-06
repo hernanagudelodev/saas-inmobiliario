@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Entregas de {{ propiedad.direccion }}{% endblock %}
+
+{% block content %}
+  <h1>Formularios de Entrega – {{ propiedad.direccion }}</h1>
+
+  {% if entregas %}
+    <table border="1" cellpadding="10" cellspacing="0">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Estado</th>
+          <th>Fecha</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entrega in entregas %}
+          <tr>
+            <td>{{ entrega.id }}</td>
+            <td>
+              {% if entrega.is_firmado %}
+                <span style="color: green;">Firmado</span>
+              {% else %}
+                <span style="color: orange;">Borrador</span>
+              {% endif %}
+            </td>
+            <td>{{ entrega.fecha_firma|default:"–" }}</td>
+            <td>
+              <a href="{% url 'inventarioapp:ver_pdf_formulario_entrega' entrega.id %}">Ver PDF</a>
+              {% if not entrega.is_firmado %}
+                | <a href="{% url 'inventarioapp:agregar_ambiente' entrega.id %}">Editar</a>
+                | <a href="{% url 'inventarioapp:resumen_formulario_entrega' entrega.id %}">Firmar y Enviar</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No hay formularios de entrega para esta propiedad.</p>
+  {% endif %}
+
+  <p><a href="{% url 'inventarioapp:crear_formulario_entrega' %}">Nuevo formulario de entrega</a></p>
+  <p><a href="{% url 'inventarioapp:lista_propiedades' %}">Volver a propiedades</a></p>
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Nuevo Formulario de Captación{% endblock %}
+
+{% block content %}
+    <h2>Estimador de Valor Inmobiliario</h2>
+    <form method="post"  class="form-horizontal">
+        {% csrf_token %}
+        
+        <div>
+            <label for="id_country">País:</label>
+            {{ form.id_country }}
+        </div>
+
+        <div>
+            <label for="id_region">Región:</label>
+            {{ form.id_region }}
+        </div>
+
+        <div>
+            <label for="id_city">Ciudad:</label>
+            {{ form.id_city }}
+        </div>
+
+        <div>
+            <label for="id_location">Localidad:</label>
+            {{ form.id_location }}
+        </div>
+
+        <div>
+            <label for="id_zone">Zona:</label>
+            {{ form.id_zone }}
+        </div>
+
+        <div>
+            <label for="id_area_objetivo">Área (m²):</label>
+            {{ form.area_objetivo }}
+        </div>
+
+        <button type="submit">Calcular</button>
+    </form>
+
+    {% if resultado %}
+        <h3>Valor estimado: ${{ resultado|floatformat:"0" }}</h3>
+    {% elif resultado is not None %}
+        <p>No se pudo calcular el valor con los datos actuales.</p>
+    {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const paisSelect = document.getElementById("id_id_country");
+        const regionSelect = document.getElementById("id_id_region");
+        const ciudadSelect = document.getElementById("id_id_city");
+
+        function cargarRegiones(idPais) {
+            fetch(`/inventarioApp/asistenteAI/api/get_regiones/?id_country=${idPais}`)
+                .then(response => response.json())
+                .then(data => {
+                    regionSelect.innerHTML = '';
+                    data.regiones.forEach(([id, label]) => {
+                        const option = document.createElement("option");
+                        option.value = id;
+                        option.textContent = label;
+                        regionSelect.appendChild(option);
+                    });
+
+                    if (regionSelect.options.length > 0) {
+                        const selectedRegion = regionSelect.options[0].value;
+                        cargarCiudades(selectedRegion);  // Dispara ciudades automáticamente
+                    }
+                });
+        }
+
+        function cargarCiudades(idRegion) {
+            fetch(`/inventarioApp/asistenteAI/api/get_ciudades/?id_region=${idRegion}`)
+                .then(response => response.json())
+                .then(data => {
+                    ciudadSelect.innerHTML = '';
+                    data.ciudades.forEach(([id, label]) => {
+                        const option = document.createElement("option");
+                        option.value = id;
+                        option.textContent = label;
+                        ciudadSelect.appendChild(option);
+                    });
+                    if (ciudadSelect.options.length > 0) {
+                        const selectedCity = ciudadSelect.options[0].value;
+                        const localidadSelect = document.getElementById("id_id_location");
+                        const zonaSelect = document.getElementById("id_id_zone");
+                        if (localidadSelect) localidadSelect.innerHTML = '';
+                        if (zonaSelect) zonaSelect.innerHTML = '';
+                        cargarLocalidades(selectedCity);
+                        cargarZonas(selectedCity);
+                    }
+                });
+        }
+
+        function cargarLocalidades(idCity) {
+            fetch(`/inventarioApp/asistenteAI/api/get_localidades/?id_city=${idCity}`)
+                .then(response => response.json())
+                .then(data => {
+                    const localidadSelect = document.getElementById("id_id_location");
+                    localidadSelect.innerHTML = '';
+                    data.localidades.forEach(([id, label]) => {
+                        const option = document.createElement("option");
+                        option.value = id;
+                        option.textContent = label;
+                        localidadSelect.appendChild(option);
+                    });
+                });
+        }
+
+        function cargarZonas(idCity) {
+            fetch(`/inventarioApp/asistenteAI/api/get_zonas/?id_city=${idCity}`)
+                .then(response => response.json())
+                .then(data => {
+                    const zonaSelect = document.getElementById("id_id_zone");
+                    zonaSelect.innerHTML = '';
+                    data.zonas.forEach(([id, label]) => {
+                        const option = document.createElement("option");
+                        option.value = id;
+                        option.textContent = label;
+                        zonaSelect.appendChild(option);
+                    });
+                });
+        }
+
+        if (paisSelect) {
+            paisSelect.addEventListener("change", function () {
+                cargarRegiones(this.value);
+            });
+
+            // Llamamos la función inmediatamente si ya hay valor
+            if (paisSelect.value) {
+                cargarRegiones(paisSelect.value);
+            }
+        }
+        if (regionSelect) {
+            regionSelect.addEventListener("change", function () {
+                const regionId = this.value;
+                cargarCiudades(regionId);
+            });
+        }
+        if(ciudadSelect){
+            ciudadSelect.addEventListener("change", function () {
+                const cityId = this.value;
+                cargarLocalidades(cityId);
+                cargarZonas(cityId);
+            });
+        }
+    });
+</script>
+{% endblock %}
+

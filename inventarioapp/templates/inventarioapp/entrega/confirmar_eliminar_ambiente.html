@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Eliminar Ambiente{% endblock %}
+
+{% block content %}
+  <h1>¿Eliminar este ambiente?</h1>
+
+  <p><strong>{{ ambiente.nombre_personalizado }}</strong></p>
+  <p>¿Estás seguro de que querés eliminar este ambiente? Esta acción no se puede deshacer.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+    <a href="{% url 'inventarioapp:agregar_ambiente' ambiente.formulario_entrega.id %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+{% endblock %}
