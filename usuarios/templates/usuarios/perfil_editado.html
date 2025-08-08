@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Perfil actualizado{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 500px;">
+  <div class="card shadow-sm mt-5">
+    <div class="card-header bg-success text-white">
+      <h4 class="mb-0"><i class="bi bi-check-circle"></i> Perfil actualizado</h4>
+    </div>
+    <div class="card-body text-center">
+      <p class="mb-4">¡Tus datos se han actualizado correctamente!</p>
+      <a href="{% url 'editar_perfil' %}" class="btn btn-outline-primary">
+        <i class="bi bi-person-lines-fill"></i> Volver a editar perfil
+      </a>
+      <a href="#" class="btn btn-primary ms-2">
+        <i class="bi bi-house"></i> Ir al inicio
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

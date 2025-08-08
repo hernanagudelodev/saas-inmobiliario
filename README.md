@@ -32,5 +32,5 @@ Proyecto en etapa de diseño estructural y modelado. No está finalizado, pero s
 
 ## 👤 Autor
 
-Desarrollado por [Tu Nombre] – [Tu LinkedIn o GitHub]  
+Desarrollado por Hernan Agudelo – https://www.linkedin.com/in/hernan-agudelo/?locale=en_US  
 Este proyecto es de código abierto bajo la licencia MIT.

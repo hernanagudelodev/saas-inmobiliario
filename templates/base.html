@@ -54,7 +54,7 @@
                 <span class="me-2">{{ request.user.first_name|default:request.user.username }}</span>
               </a>
               <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="perfilDropdown">
-                <li><a class="dropdown-item" href="{% url 'edit' %}"><i class="bi bi-person-lines-fill me-1"></i> Mi perfil</a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-person-lines-fill me-1"></i> Mi perfil (pendiente)</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
                   <form method="post" action="{% url 'logout' %}" style="display:inline;">
@@ -83,7 +83,7 @@
     <div class="offcanvas-body">
       <ul class="nav flex-column">
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'dashboard' %}"><i class="bi bi-house"></i> Inicio</a>
+          <a class="nav-link" href="#"><i class="bi bi-house"></i> Inicio (pediente)</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="{% url 'inventarioapp:home' %}"><i class="bi bi-archive"></i> Inventarios</a>
@@ -108,8 +108,8 @@
         <nav class="col-md-2 d-none d-md-block sidebar pt-4">
           <ul class="nav flex-column">
             <li class="nav-item">
-              <a class="nav-link {% if section == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
-                <i class="bi bi-house"></i> Inicio
+              <a class="nav-link {% if section == 'dashboard' %}active{% endif %}" href="#">
+                <i class="bi bi-house"></i> Inicio (pendiente)
               </a>
             </li>
             <li class="nav-item">
