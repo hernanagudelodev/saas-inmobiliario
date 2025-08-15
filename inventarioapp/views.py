@@ -23,11 +23,11 @@ from weasyprint import HTML
 from io import BytesIO
 from django.utils import timezone
 from django.core.validators import validate_email
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, PermissionDenied
 from collections import defaultdict
 import random
 from dateutil.relativedelta import relativedelta
-from django.views.generic import View
+from usuarios.mixins import TenantRequiredMixin
 
 
 def _get_secciones_valores(captacion):
@@ -159,63 +159,34 @@ class ClienteBaseView(LoginRequiredMixin):
         context['section'] = self.section
         return context
 
-""" class CrearCliente(LoginRequiredMixin,CreateView):
+class CrearCliente(TenantRequiredMixin, ClienteBaseView, CreateView):
     model = Cliente
     fields = '__all__'
     success_url = reverse_lazy('inventarioapp:lista_clientes')
     template_name = "inventarioapp/clientes/form_cliente.html"
 
-class ListaClientes(LoginRequiredMixin,ListView):
-    model = Cliente
-    fields = '__all__'
-    context_object_name = 'clientes'
-    template_name = "inventarioapp/clientes/lista_clientes.html"
-    paginate_by = 2   # Número de clientes por página
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Oculta el campo inmobiliaria
+        form.fields.pop('inmobiliaria', None)
+        return form
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        query = self.request.GET.get("q", "")
-        if query:
-            queryset = queryset.filter(
-                Q(nombre__icontains=query) |
-                Q(identificacion__icontains=query) 
-            )
-        return queryset.order_by("nombre")
+    def form_valid(self, form):
+        try:
+            form.instance.inmobiliaria = self.request.user.profile.inmobiliaria
+        except Exception:
+            raise PermissionDenied("El usuario no tiene inmobiliaria asignada.")
+        return super().form_valid(form)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["q"] = self.request.GET.get("q", "")
-        return context
+    def form_valid(self, form):
+        # asignar automáticamente la inmobiliaria del usuario
+        try:
+            form.instance.inmobiliaria = self.request.user.profile.inmobiliaria
+        except Exception:
+            raise PermissionDenied("El usuario no tiene inmobiliaria asignada.")
+        return super().form_valid(form)
 
-class ActualizarCliente(LoginRequiredMixin, UpdateView):
-    model = Cliente
-    fields = '__all__'
-    success_url = reverse_lazy('inventarioapp:lista_clientes')
-    template_name = "inventarioapp/clientes/form_cliente.html"
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['actualizar'] = True
-        return context
-    
-class EliminarCliente(LoginRequiredMixin, DeleteView):
-    model = Cliente
-    fields = '__all__'
-    success_url = reverse_lazy('inventarioapp:lista_clientes')
-    template_name = "inventarioapp/clientes/borrar_cliente.html"
-
-class DetalleCliente(LoginRequiredMixin,DetailView):
-    model = Cliente
-    fields = '__all__'
-    success_url = reverse_lazy('inventarioapp:lista_clientes')
-    template_name = "inventarioapp/clientes/detalle_cliente.html" """
-
-class CrearCliente(ClienteBaseView, CreateView):
-    model = Cliente
-    fields = '__all__'
-    success_url = reverse_lazy('inventarioapp:lista_clientes')
-    template_name = "inventarioapp/clientes/form_cliente.html"
-
-class ListaClientes(ClienteBaseView, ListView):
+class ListaClientes(TenantRequiredMixin,ClienteBaseView, ListView):
     model = Cliente
     fields = '__all__'
     context_object_name = 'clientes'
@@ -237,23 +208,30 @@ class ListaClientes(ClienteBaseView, ListView):
         context["q"] = self.request.GET.get("q", "")
         return context
 
-class ActualizarCliente(ClienteBaseView, UpdateView):
+class ActualizarCliente(TenantRequiredMixin,ClienteBaseView, UpdateView):
     model = Cliente
     fields = '__all__'
     success_url = reverse_lazy('inventarioapp:lista_clientes')
     template_name = "inventarioapp/clientes/form_cliente.html"
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Oculta el campo inmobiliaria
+        form.fields.pop('inmobiliaria', None)
+        return form
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['actualizar'] = True
         return context
 
-class EliminarCliente(ClienteBaseView, DeleteView):
+class EliminarCliente(TenantRequiredMixin, ClienteBaseView, DeleteView):
     model = Cliente
     fields = '__all__'
     success_url = reverse_lazy('inventarioapp:lista_clientes')
     template_name = "inventarioapp/clientes/borrar_cliente.html"
 
-class DetalleCliente(ClienteBaseView, DetailView):
+class DetalleCliente(TenantRequiredMixin, ClienteBaseView, DetailView):
     model = Cliente
     fields = '__all__'
     success_url = reverse_lazy('inventarioapp:lista_clientes')

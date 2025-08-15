@@ -1,5 +1,6 @@
 from django.db import models
 from usuarios.models import Inmobiliaria
+from django.core.exceptions import ValidationError
 
 # =======================
 # CATÁLOGOS BÁSICOS
