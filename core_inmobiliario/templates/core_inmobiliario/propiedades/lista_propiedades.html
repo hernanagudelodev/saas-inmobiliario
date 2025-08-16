@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container" style="max-width: 1100px;">
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-primary text-white">
+      <h4 class="mb-0"><i class="bi bi-house-door"></i> Lista de propiedades</h4>
+    </div>
+    <div class="card-body">
+
+      <!-- Formulario de búsqueda -->
+      <form method="get" class="d-flex mb-3 gap-2">
+        <input type="text" name="q" class="form-control" style="max-width:260px;" placeholder="Buscar dirección, ciudad, tipo o matrícula" value="{{ q }}">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-search"></i> Buscar
+        </button>
+        {% if q %}
+          <a href="{% url 'core_inmobiliario:lista_propiedades' %}" class="btn btn-outline-secondary">
+            Limpiar búsqueda
+          </a>
+        {% endif %}
+      </form>
+
+      <!-- Tabla visible solo en md+ -->
+      <div class="table-responsive d-none d-md-block">
+        <table class="table table-striped align-middle">
+          <thead>
+            <tr>
+              <th>Dirección</th>
+              <th>Ciudad</th>
+              <th>Tipo</th>
+              <th>Matrícula</th>
+              <th>Clientes</th>
+              <th style="min-width:180px;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for propiedad in propiedades %}
+              <tr>
+                <td>
+                  <a href="{% url 'core_inmobiliario:detalle_propiedad' propiedad.id %}" class="fw-bold link-primary">
+                    {{ propiedad.direccion }}
+                  </a>
+                </td>
+                <td>{{ propiedad.ciudad|default:"–" }}</td>
+                <td>{{ propiedad.tipo_propiedad|default:"–" }}</td>
+                <td>{{ propiedad.matricula_inmobiliaria|default:"–" }}</td>
+                <td>
+                  {% for cliente in propiedad.clientes.all %}
+                    <span class="badge bg-secondary">{{ cliente.nombre }}</span>
+                    {% if not forloop.last %}<br>{% endif %}
+                  {% empty %}
+                    <span class="text-muted">Sin clientes</span>
+                  {% endfor %}
+                </td>
+                <td>
+                  <a href="{% url 'core_inmobiliario:actualizar_propiedad' propiedad.id %}" class="btn btn-sm btn-outline-secondary me-1">Actualizar</a>
+                  <a href="#" class="btn btn-sm btn-outline-danger me-1">Eliminar</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="6" class="text-center text-muted">No hay propiedades.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Cards para mobile: visible solo en sm -->
+      <div class="d-block d-md-none">
+        {% for propiedad in propiedades %}
+          <div class="card mb-3">
+            <div class="card-body pb-2">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <a href="{% url 'core_inmobiliario:detalle_propiedad' propiedad.id %}" class="fw-bold link-primary fs-6">
+                    {{ propiedad.direccion }}
+                  </a>
+                  <div class="text-muted small">{{ propiedad.ciudad|default:"–" }} | {{ propiedad.tipo_propiedad|default:"–" }}</div>
+                  <div class="small">Matrícula: <b>{{ propiedad.matricula_inmobiliaria|default:"–" }}</b></div>
+                  <div>
+                    {% for cliente in propiedad.clientes.all %}
+                      <span class="badge bg-secondary">{{ cliente.nombre }}</span>
+                    {% empty %}
+                      <span class="text-muted">Sin clientes</span>
+                    {% endfor %}
+                  </div>
+                </div>
+                <div class="d-flex flex-column align-items-end ms-2">
+                  <a href="{% url 'core_inmobiliario:actualizar_propiedad' propiedad.id %}" class="btn btn-sm btn-outline-secondary mb-1">Actualizar</a>
+                  <a href="#" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div class="text-muted text-center">No hay propiedades.</div>
+        {% endfor %}
+      </div>
+
+      <!-- Paginador Bootstrap -->
+      <nav aria-label="Paginación de propiedades">
+        <ul class="pagination justify-content-center">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?q={{ q }}&page={{ page_obj.previous_page_number }}" aria-label="Anterior">&laquo;</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">&laquo;</span>
+            </li>
+          {% endif %}
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+              <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+              <li class="page-item"><a class="page-link" href="?q={{ q }}&page={{ num }}">{{ num }}</a></li>
+            {% endif %}
+          {% endfor %}
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?q={{ q }}&page={{ page_obj.next_page_number }}" aria-label="Siguiente">&raquo;</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">&raquo;</span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+
+      <a href="{% url 'core_inmobiliario:crear_propiedad' %}" class="btn btn-success mt-2">Crear una Propiedad</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

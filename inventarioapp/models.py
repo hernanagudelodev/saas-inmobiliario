@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from core_inmobiliario.models import PropiedadCliente
+from usuarios.models import Inmobiliaria
 
 def only_int(value): 
     if value.isdigit()==False:
@@ -56,6 +57,7 @@ class ItemBase(models.Model):
 
     tipo_ambiente = models.CharField(max_length=20, choices=TIPO_AMBIENTE_CHOICES)
     nombre_item = models.CharField(max_length=100)
+    inmobiliaria = models.ForeignKey(Inmobiliaria, on_delete=models.PROTECT) #Esta relación es para garantizar multitenencia 
 
     class Meta:
         verbose_name = 'Item Base'
@@ -141,6 +143,7 @@ Esta clase define la sección del formulario de captación.'''
 class SeccionCaptacion(models.Model):
     nombre = models.CharField(max_length=100)
     orden = models.PositiveIntegerField(default=0)
+    inmobiliaria = models.ForeignKey(Inmobiliaria, on_delete=models.PROTECT) #Esta relación es para garantizar multitenencia 
 
     class Meta:
         ordering = ['orden', 'id']

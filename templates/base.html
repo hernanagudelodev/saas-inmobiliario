@@ -89,10 +89,10 @@
           <a class="nav-link" href="{% url 'inventarioapp:home' %}"><i class="bi bi-archive"></i> Inventarios</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'inventarioapp:lista_clientes' %}"><i class="bi bi-people"></i> Clientes</a>
+          <a class="nav-link" href="{% url 'core_inmobiliario:lista_clientes' %}"><i class="bi bi-people"></i> Clientes</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'inventarioapp:lista_propiedades' %}"><i class="bi bi-building"></i> Propiedades</a>
+          <a class="nav-link" href="{% url 'core_inmobiliario:lista_propiedades' %}"><i class="bi bi-building"></i> Propiedades</a>
         </li>
         <li class="nav-item">
           <a class="nav-link disabled" href="#"><i class="bi bi-calculator"></i> Contabilidad <span class="badge bg-secondary">Próximamente</span></a>
@@ -118,12 +118,12 @@
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link {% if section == 'clientes' %}active{% endif %}" href="{% url 'inventarioapp:lista_clientes' %}">
+              <a class="nav-link {% if section == 'clientes' %}active{% endif %}" href="{% url 'core_inmobiliario:lista_clientes' %}">
                 <i class="bi bi-people"></i> Clientes
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link {% if section == 'propiedades' %}active{% endif %}" href="{% url 'inventarioapp:lista_propiedades' %}">
+              <a class="nav-link {% if section == 'propiedades' %}active{% endif %}" href="{% url 'core_inmobiliario:lista_propiedades' %}">
                 <i class="bi bi-building"></i> Propiedades
               </a>
             </li>

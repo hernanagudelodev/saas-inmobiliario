@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de Cliente{% endblock %}
+
+{% block content %}
+  <div class="card mx-auto" style="max-width:600px;">
+    <div class="card-header bg-primary text-white">
+      <h3 class="mb-0"><i class="bi bi-person"></i> {{ cliente.nombre }}</h3>
+    </div>
+    <div class="card-body">
+      <ul class="list-group list-group-flush mb-3">
+        <li class="list-group-item">
+          <strong>Identificación:</strong> {{ cliente.identificacion|default:"–" }}
+        </li>
+        <li class="list-group-item">
+          <strong>Dirección Correspondencia:</strong> {{ cliente.direccion_correspondiencia|default:"–" }}
+        </li>
+        <li class="list-group-item">
+          <strong>Teléfono:</strong> {{ cliente.telefono|default:"–" }}
+        </li>
+        <li class="list-group-item">
+          <strong>Correo Electrónico:</strong> {{ cliente.email|default:"–" }}
+        </li>
+      </ul>
+      <div class="d-flex gap-2 mb-3">
+        <a href="{% url 'core_inmobiliario:actualizar_cliente' cliente.id %}" class="btn btn-outline-primary">
+          <i class="bi bi-pencil"></i> Actualizar
+        </a>
+        <a href="{% url 'core_inmobiliario:eliminar_cliente' cliente.id %}" class="btn btn-outline-danger">
+          <i class="bi bi-trash"></i> Eliminar
+        </a>
+      </div>
+      <a href="{% url 'core_inmobiliario:lista_clientes' %}" class="btn btn-link ps-0">
+        <i class="bi bi-arrow-left"></i> Volver a la lista de Clientes
+      </a>
+    </div>
+  </div>
+{% endblock %}
