@@ -112,7 +112,7 @@ class DetalleCliente(TenantRequiredMixin, ClienteBaseView, DetailView):
 A partir de esta linea se crearan las vistas para CRUD de propiedades
 '''
 
-class ListaPropiedades(LoginRequiredMixin,ListView):
+class ListaPropiedades(TenantRequiredMixin,LoginRequiredMixin,ListView):
     model = Propiedad
     fields = '__all__'
     context_object_name = 'propiedades'
@@ -140,6 +140,7 @@ class ListaPropiedades(LoginRequiredMixin,ListView):
 def crear_propiedad(request):
     if request.method == 'POST':
         form = PropiedadForm(request.POST)
+        form.instance.inmobiliaria = request.user.profile.inmobiliaria
         if form.is_valid():
             propiedad = form.save()
             messages.success(request, "Propiedad creada exitosamente.")

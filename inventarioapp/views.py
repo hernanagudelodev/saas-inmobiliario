@@ -308,19 +308,51 @@ def actualizar_propiedad(request, id):
         'section': 'propiedades',
     })
 
+# @login_required
+# def agregar_relacion_propiedad(request, propiedad_id):
+#     propiedad = get_object_or_404(Propiedad, id=propiedad_id)
+#     if request.method == 'POST':
+#         form = AgregarPropiedadClienteForm(request.POST, propiedad=propiedad)
+#         if form.is_valid():
+#             relacion = form.save(commit=False)
+#             relacion.propiedad = propiedad
+#             relacion.save()
+#             messages.success(request, "Relación agregada correctamente.")
+#             return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
+#     else:
+#         form = AgregarPropiedadClienteForm(propiedad=propiedad)
+#     return render(request, 'inventarioapp/propiedades/agregar_relacion.html', {
+#         'form': form,
+#         'propiedad': propiedad,
+#         'section': 'propiedades',
+#     })
+
+
 @login_required
 def agregar_relacion_propiedad(request, propiedad_id):
     propiedad = get_object_or_404(Propiedad, id=propiedad_id)
     if request.method == 'POST':
         form = AgregarPropiedadClienteForm(request.POST, propiedad=propiedad)
+        
+        # Asignamos la propiedad y la inmobiliaria a la instancia del formulario
+        # ANTES de llamar a la validación.
+        form.instance.propiedad = propiedad
+        try:
+            form.instance.inmobiliaria = request.user.profile.inmobiliaria
+            print("Asignando inmobiliaria:", form.instance.inmobiliaria)
+        except Exception:
+            # Es una buena práctica manejar el caso en que el usuario no tenga
+            # una inmobiliaria asociada.
+            raise PermissionDenied("El usuario actual no tiene una inmobiliaria asignada.")
+
         if form.is_valid():
-            relacion = form.save(commit=False)
-            relacion.propiedad = propiedad
-            relacion.save()
+            print("Formulario válido:", form.cleaned_data)
+            form.save()  # Ahora guardamos la instancia ya validada y completa.
             messages.success(request, "Relación agregada correctamente.")
             return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
     else:
         form = AgregarPropiedadClienteForm(propiedad=propiedad)
+    
     return render(request, 'inventarioapp/propiedades/agregar_relacion.html', {
         'form': form,
         'propiedad': propiedad,
@@ -367,7 +399,7 @@ A partir de esta linea se hacen las vistas para la creación de formularios de e
 '''
 La primera vista crea la relación entre cliente y propiedad.
 '''
-@login_required
+""" @login_required
 def crear_formulario_entrega(request, propiedad_id):
     propiedad = get_object_or_404(Propiedad, id=propiedad_id)
     if request.method == 'POST':
@@ -391,6 +423,55 @@ def crear_formulario_entrega(request, propiedad_id):
                     "No se puede crear un formulario de entrega: no existe una captación firmada para esta propiedad."
                 )
                 return redirect('core_inmobiliario:detalle_propiedad', propiedad_id=propiedad.id)
+
+            entrega = FormularioEntrega.objects.create(propiedad_cliente=prop_cliente)
+            messages.success(request, "Formulario de entrega creado exitosamente.")
+            return redirect('inventarioapp:agregar_ambiente', entrega_id=entrega.id)
+    else:
+        form = SeleccionarPropiedadClienteForm(propiedad=propiedad)
+    return render(request, 'inventarioapp/entrega/crear_formulario_entrega.html', {'form': form, 'propiedad': propiedad}) """
+
+
+# inventarioapp/views.py
+
+@login_required
+def crear_formulario_entrega(request, propiedad_id):
+    propiedad = get_object_or_404(Propiedad, id=propiedad_id)
+    if request.method == 'POST':
+        form = SeleccionarPropiedadClienteForm(request.POST, propiedad=propiedad)
+
+        # --- TU SOLUCIÓN (¡CORRECTA!) ---
+        # Asignamos los datos que faltan a la instancia del formulario ANTES de validar.
+        try:
+            form.instance.inmobiliaria = request.user.profile.inmobiliaria
+            form.instance.propiedad = propiedad
+            form.instance.relacion = PropiedadCliente.ARRENDATARIO
+        except Exception:
+            # Maneja el caso en que el usuario no tenga inmobiliaria
+            raise PermissionDenied("El usuario no tiene una inmobiliaria asignada.")
+
+        if form.is_valid():
+            cliente = form.cleaned_data['cliente']
+            
+            # Ahora que la validación pasó, podemos usar get_or_create con seguridad.
+            prop_cliente, created = PropiedadCliente.objects.get_or_create(
+                cliente=cliente,
+                propiedad=propiedad,
+                relacion=PropiedadCliente.ARRENDATARIO,
+                defaults={'inmobiliaria': request.user.profile.inmobiliaria}
+            )
+
+            # Verifica si hay captación firmada
+            captacion_firmada = FormularioCaptacion.objects.filter(
+                propiedad_cliente__propiedad=propiedad,
+                is_firmado=True
+            ).exists()
+            if not captacion_firmada:
+                messages.error(
+                    request,
+                    "No se puede crear un formulario de entrega: no existe una captación firmada para esta propiedad."
+                )
+                return redirect('inventarioapp:detalle_propiedad', id=propiedad.id)
 
             entrega = FormularioEntrega.objects.create(propiedad_cliente=prop_cliente)
             messages.success(request, "Formulario de entrega creado exitosamente.")

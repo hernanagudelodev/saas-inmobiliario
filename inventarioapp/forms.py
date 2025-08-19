@@ -36,9 +36,14 @@ class AgregarPropiedadClienteForm(forms.ModelForm):
         propiedad = kwargs.pop('propiedad', None)
         super().__init__(*args, **kwargs)
         if propiedad:
-            # Excluir clientes ya asociados a esa propiedad
-            clientes_asociados = propiedad.propiedadcliente_set.values_list('cliente_id', flat=True)
-            self.fields['cliente'].queryset = Cliente.objects.exclude(id__in=clientes_asociados)
+            # --- LÓGICA CORREGIDA ---
+            # Ahora solo filtramos por la inmobiliaria. Esto mostrará los 2 clientes
+            # que esperas ver. Si intentas agregar una relación que ya existe,
+            # Django mostrará un error de validación claro, que es el
+            # comportamiento deseado.
+            self.fields['cliente'].queryset = Cliente.objects.filter(
+                inmobiliaria=propiedad.inmobiliaria
+            )
 
 '''
 A partir de esta linea se hacen los forms para creación de formulario de entrega
