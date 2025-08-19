@@ -274,7 +274,7 @@ def crear_propiedad(request):
         if form.is_valid():
             propiedad = form.save()
             messages.success(request, "Propiedad creada exitosamente.")
-            return redirect('inventarioapp:detalle_propiedad', id=propiedad.id)
+            return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
         else:
             # Captura errores no de campos, sino generales (non_field_errors)
             for error in form.non_field_errors():
@@ -294,14 +294,14 @@ def actualizar_propiedad(request, id):
         if form.is_valid():
             form.save()
             messages.success(request, "Propiedad actualizada exitosamente.")
-            return redirect('inventarioapp:detalle_propiedad', id=propiedad.id)
+            return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
         else:
             # Captura errores no de campos, sino generales (non_field_errors)
             for error in form.non_field_errors():
                 messages.error(request, error)
     else:
         form = PropiedadForm(instance=propiedad)
-    return render(request, 'inventarioapp/propiedades/form_propiedad.html', {
+    return render(request, 'core_inmobiliario/propiedades/form_propiedad.html', {
         'form': form,
         'actualizar': True,
         'propiedad': propiedad,
@@ -318,7 +318,7 @@ def agregar_relacion_propiedad(request, propiedad_id):
             relacion.propiedad = propiedad
             relacion.save()
             messages.success(request, "Relación agregada correctamente.")
-            return redirect('inventarioapp:detalle_propiedad', id=propiedad.id)
+            return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
     else:
         form = AgregarPropiedadClienteForm(propiedad=propiedad)
     return render(request, 'inventarioapp/propiedades/agregar_relacion.html', {
@@ -333,7 +333,7 @@ def eliminar_relacion_propiedad(request, relacion_id):
     if request.method == 'POST':
         relacion.delete()
         messages.success(request, "Relación eliminada correctamente.")
-    return redirect('inventarioapp:detalle_propiedad', id=propiedad_id)
+    return redirect('core_inmobiliario:detalle_propiedad', id=propiedad_id)
 
 @login_required
 def detalle_propiedad(request, id):
@@ -390,7 +390,7 @@ def crear_formulario_entrega(request, propiedad_id):
                     request,
                     "No se puede crear un formulario de entrega: no existe una captación firmada para esta propiedad."
                 )
-                return redirect('inventarioapp:detalle_propiedad', propiedad_id=propiedad.id)
+                return redirect('core_inmobiliario:detalle_propiedad', propiedad_id=propiedad.id)
 
             entrega = FormularioEntrega.objects.create(propiedad_cliente=prop_cliente)
             messages.success(request, "Formulario de entrega creado exitosamente.")
@@ -566,7 +566,7 @@ def enviar_formulario_pdf(request, entrega_id):
     propiedad = entrega.propiedad
 
     messages.success(request, "Formulario enviado por correo.")
-    return redirect('inventarioapp:detalle_propiedad', id=propiedad.id)
+    return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
 
 
 '''
@@ -611,12 +611,12 @@ def confirmar_eliminar_entrega(request, entrega_id):
     propiedad_id = entrega.propiedad_cliente.propiedad.id
     if entrega.is_firmado:
         messages.error(request, "No se puede eliminar un formulario de entrega ya firmado.")
-        return redirect('inventarioapp:detalle_propiedad', propiedad_id)
+        return redirect('core_inmobiliario:detalle_propiedad', propiedad_id)
     
     if request.method == "POST":
         entrega.delete()
         messages.success(request, "Formulario de entrega en borrador eliminado exitosamente.")
-        return redirect('inventarioapp:detalle_propiedad', propiedad_id)
+        return redirect('core_inmobiliario:detalle_propiedad', propiedad_id)
     
     return render(request, 'inventarioapp/entrega/confirmar_eliminar_entrega.html', {
         'entrega': entrega,
@@ -784,7 +784,7 @@ def formulario_captacion_dinamico(request, relacion_id):
                         )
             # 3. Redirigir a una vista de éxito, detalle, o lo que prefieras
             propiedad_id = captacion.propiedad_cliente.propiedad.id
-            return redirect('inventarioapp:detalle_propiedad', id=propiedad_id)
+            return redirect('core_inmobiliario:detalle_propiedad', id=propiedad_id)
     else:
         form = FormularioCaptacionDinamico()
     secciones_fields = []
@@ -878,7 +878,7 @@ def enviar_formulario_captacion(request, captacion_id):
         email.attach(f'formulario_captacion_{captacion.id}.pdf', pdf_file.getvalue(), 'application/pdf')
         email.send()
         messages.success(request, "Formulario enviado por correo.")
-        return redirect('inventarioapp:detalle_propiedad', id=propiedad_id)
+        return redirect('core_inmobiliario:detalle_propiedad', id=propiedad_id)
 
     return render(request, 'inventarioapp/captacion/confirmar_envio_captacion.html', {
         'captacion': captacion,
@@ -898,12 +898,12 @@ def eliminar_captacion(request, captacion_id):
 
     if captacion.is_firmado:
         messages.error(request, "No se puede eliminar una captación ya firmada.")
-        return redirect('inventarioapp:detalle_propiedad', id=propiedad_id)
+        return redirect('core_inmobiliario:detalle_propiedad', id=propiedad_id)
 
     if request.method == 'POST':
         captacion.delete()
         messages.success(request, "Captación eliminada correctamente.")
-        return redirect('inventarioapp:detalle_propiedad', id=propiedad_id)
+        return redirect('core_inmobiliario:detalle_propiedad', id=propiedad_id)
 
     return render(request, 'inventarioapp/captacion/confirmar_eliminar_captacion.html', {
         'captacion': captacion,
@@ -949,7 +949,7 @@ def editar_captacion(request, captacion_id):
                     elif campo.tipo == 'booleano':
                         valor_obj.valor_booleano = value
                     valor_obj.save()
-            return redirect('inventarioapp:detalle_propiedad', id=captacion.propiedad_cliente.propiedad.id)
+            return redirect('core_inmobiliario:detalle_propiedad', id=captacion.propiedad_cliente.propiedad.id)
     else:
         # Instancia del model, initial para los dinámicos
         form = FormularioCaptacionDinamico(instance=captacion, initial=initial)

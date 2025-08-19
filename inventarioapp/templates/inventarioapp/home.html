@@ -8,7 +8,7 @@
         <i class="bi bi-building fs-2 text-primary"></i>
         <h6 class="card-title mt-2">Propiedades</h6>
         <h3>{{ estadisticas.total_propiedades }}</h3>
-        <a href="{% url 'inventarioapp:lista_propiedades' %}" class="stretched-link"></a>
+        <a href="{% url 'core_inmobiliario:lista_propiedades' %}" class="stretched-link"></a>
       </div>
     </div>
   </div>
@@ -19,7 +19,7 @@
         <i class="bi bi-people fs-2 text-success"></i>
         <h6 class="card-title mt-2">Clientes</h6>
         <h3>{{ estadisticas.total_clientes }}</h3>
-        <a href="{% url 'inventarioapp:lista_clientes' %}" class="stretched-link"></a>
+        <a href="{% url 'core_inmobiliario:lista_clientes' %}" class="stretched-link"></a>
       </div>
     </div>
   </div>
@@ -113,10 +113,10 @@
         <i class="bi bi-lightning"></i> Accesos rápidos
       </div>
       <div class="card-body">
-        <a href="{% url 'inventarioapp:crear_cliente' %}" class="btn btn-outline-primary mb-2 w-100">
+        <a href="{% url 'core_inmobiliario:crear_cliente' %}" class="btn btn-outline-primary mb-2 w-100">
           <i class="bi bi-file-earmark-plus"></i> Crear Cliente
         </a>
-        <a href="{% url 'inventarioapp:crear_propiedad' %}" class="btn btn-outline-success mb-2 w-100">
+        <a href="{% url 'core_inmobiliario:crear_propiedad' %}" class="btn btn-outline-success mb-2 w-100">
           <i class="bi bi-file-earmark-plus"></i> Crear Propiedad
         </a>
         <!-- Más acciones rápidas -->
