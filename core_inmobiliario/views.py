@@ -140,9 +140,19 @@ class ListaPropiedades(TenantRequiredMixin,LoginRequiredMixin,ListView):
 def crear_propiedad(request):
     if request.method == 'POST':
         form = PropiedadForm(request.POST)
-        form.instance.inmobiliaria = request.user.profile.inmobiliaria
+        # Ahora form.is_valid() funcionará, porque excluimos 'inmobiliaria' de su validación.
         if form.is_valid():
-            propiedad = form.save()
+            # Creamos el objeto en memoria, sin enviarlo aún a la base de datos.
+            propiedad = form.save(commit=False)
+            try:
+                # Asignamos la inmobiliaria del usuario actual.
+                propiedad.inmobiliaria = request.user.profile.inmobiliaria
+            except Exception:
+                raise PermissionDenied("El usuario no tiene una inmobiliaria asignada.")
+            
+            # Ahora sí, guardamos el objeto completo en la base de datos.
+            propiedad.save()
+            
             messages.success(request, "Propiedad creada exitosamente.")
             return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
         else:
@@ -158,7 +168,7 @@ def crear_propiedad(request):
 
 @login_required
 def actualizar_propiedad(request, id):
-    propiedad = get_object_or_404(Propiedad, id=id)
+    propiedad = get_object_or_404(Propiedad, id=id, inmobiliaria=request.user.profile.inmobiliaria)
     if request.method == 'POST':
         form = PropiedadForm(request.POST, instance=propiedad)
         if form.is_valid():
@@ -183,15 +193,25 @@ def agregar_relacion_propiedad(request, propiedad_id):
     propiedad = get_object_or_404(Propiedad, id=propiedad_id)
     if request.method == 'POST':
         form = AgregarPropiedadClienteForm(request.POST, propiedad=propiedad)
+        
+        # Asignamos la propiedad y la inmobiliaria a la instancia del formulario
+        # ANTES de llamar a la validación.
+        form.instance.propiedad = propiedad
+        try:
+            form.instance.inmobiliaria = request.user.profile.inmobiliaria
+        except Exception:
+            # Es una buena práctica manejar el caso en que el usuario no tenga
+            # una inmobiliaria asociada.
+            raise PermissionDenied("El usuario actual no tiene una inmobiliaria asignada.")
+
         if form.is_valid():
-            relacion = form.save(commit=False)
-            relacion.propiedad = propiedad
-            relacion.save()
+            form.save()  # Ahora guardamos la instancia ya validada y completa.
             messages.success(request, "Relación agregada correctamente.")
             return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
     else:
         form = AgregarPropiedadClienteForm(propiedad=propiedad)
-    return render(request, 'core_inmobiliario/propiedades/agregar_relacion.html', {
+    
+    return render(request, 'inventarioapp/propiedades/agregar_relacion.html', {
         'form': form,
         'propiedad': propiedad,
         'section': 'propiedades',
@@ -207,7 +227,7 @@ def eliminar_relacion_propiedad(request, relacion_id):
 
 @login_required
 def detalle_propiedad(request, id):
-    propiedad = get_object_or_404(Propiedad, id=id)
+    propiedad = get_object_or_404(Propiedad, id=id, inmobiliaria=request.user.profile.inmobiliaria)
     # Relacionados a la propiedad
     relaciones = propiedad.propiedadcliente_set.all()
     captaciones = FormularioCaptacion.objects.filter(propiedad_cliente__in=relaciones)

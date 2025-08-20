@@ -1,16 +1,22 @@
 from django import forms
 from .models import *
-from .models import *
+
 
 class PropiedadForm(forms.ModelForm):
     class Meta:
         model = Propiedad
-        # Incluye solo los campos relevantes
+        # Los campos que el usuario llenará
         fields = ['ciudad', 'tipo_propiedad', 'matricula_inmobiliaria', 'direccion', 'latitude', 'longitude']
+        
+        # --- LÍNEA CLAVE AÑADIDA ---
+        # Excluimos 'inmobiliaria' para que form.is_valid() no falle por su ausencia.
+        exclude = ['inmobiliaria', 'clientes'] # También excluimos 'clientes' que es ManyToMany
+        
         widgets = {
             'latitude': forms.HiddenInput(),
             'longitude': forms.HiddenInput(),
         }
+        # Tu método clean para lat/long está perfecto y no necesita cambios.
         def clean(self):
             cleaned_data = super().clean()
             latitude = cleaned_data.get('latitude')
@@ -34,6 +40,11 @@ class AgregarPropiedadClienteForm(forms.ModelForm):
         propiedad = kwargs.pop('propiedad', None)
         super().__init__(*args, **kwargs)
         if propiedad:
-            # Excluir clientes ya asociados a esa propiedad
-            clientes_asociados = propiedad.propiedadcliente_set.values_list('cliente_id', flat=True)
-            self.fields['cliente'].queryset = Cliente.objects.exclude(id__in=clientes_asociados)
+            # --- LÓGICA CORREGIDA ---
+            # Ahora solo filtramos por la inmobiliaria. Esto mostrará los 2 clientes
+            # que esperas ver. Si intentas agregar una relación que ya existe,
+            # Django mostrará un error de validación claro, que es el
+            # comportamiento deseado.
+            self.fields['cliente'].queryset = Cliente.objects.filter(
+                inmobiliaria=propiedad.inmobiliaria
+            )

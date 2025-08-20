@@ -4,28 +4,6 @@ from .models import *
 from core_inmobiliario.models import Cliente, Propiedad, Ciudad, TipoPropiedad, PropiedadCliente
 from django.forms.formsets import Form, BaseFormSet, formset_factory, ValidationError
 
-class PropiedadForm(forms.ModelForm):
-    class Meta:
-        model = Propiedad
-        # Incluye solo los campos relevantes
-        fields = ['ciudad', 'tipo_propiedad', 'matricula_inmobiliaria', 'direccion', 'latitude', 'longitude']
-        widgets = {
-            'latitude': forms.HiddenInput(),
-            'longitude': forms.HiddenInput(),
-        }
-        def clean(self):
-            cleaned_data = super().clean()
-            latitude = cleaned_data.get('latitude')
-            longitude = cleaned_data.get('longitude')
-            if latitude is None or longitude is None:
-                raise forms.ValidationError("Debe seleccionar la ubicación en el mapa.")
-            try:
-                lat = float(latitude)
-                lng = float(longitude)
-            except (TypeError, ValueError):
-                raise forms.ValidationError("Ubicación inválida. Seleccione un punto en el mapa.")
-            return cleaned_data
-
 
 class AgregarPropiedadClienteForm(forms.ModelForm):
     class Meta:
@@ -49,10 +27,6 @@ class AgregarPropiedadClienteForm(forms.ModelForm):
 A partir de esta linea se hacen los forms para creación de formulario de entrega
 '''
 
-# class SeleccionarPropiedadClienteForm(forms.ModelForm):
-#     class Meta:
-#         model = PropiedadCliente
-#         fields = ['propiedad', 'cliente', 'relacion']
 
 class SeleccionarPropiedadClienteForm(forms.ModelForm):
     class Meta:
