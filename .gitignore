@@ -17,3 +17,6 @@ db.sqlite3
 media/
 staticfiles/
 .env
+
+# Archivos de diseño
+archivos_disenio/

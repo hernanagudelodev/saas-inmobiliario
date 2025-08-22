@@ -10,28 +10,45 @@ Designed with a **modular architecture** to integrate all essential services req
 
 ---
 
-## 🚀 Current Features
-- **Full Integration with AppInventarios**
-  - Complete property inventory management for acquisition (*captación*) and delivery (*entrega*), with dynamic forms, digital signatures, and PDF generation.
-- **Multi-Tenant Architecture**
-  - Multiple real estate agencies can operate independently in the same system, with isolated data per tenant.
+## 🚀 Implemented Features
+
+### Core & Multi-Tenancy Module
+- **Multi-Tenant Architecture:** Multiple real estate agencies can operate independently and securely, with all their data isolated.
+- **User and Profile Management:** Authentication system and extended user profiles, associating each user with a real estate agency (tenant).
+
+### Clients & Properties Module (`core_inmobiliario`)
+- **Full CRUD for Clients and Properties:** Complete management of the client and property portfolio.
+- **Geolocation:** Interactive map (Leaflet.js) to register the exact location of properties.
+- **Dynamic Relationships:** System for linking clients to properties with different roles (Owner, Tenant, etc.).
+
+### Inventory Module (`inventarioapp`)
+- **Dynamic Onboarding Forms:** Creation of fully customizable property onboarding forms by section and field type.
+- **Detailed Handover Forms:** A complete workflow to document the handover of a property, recording specific rooms and items.
+- **Digital Signature:** Integration with SignaturePad.js for the electronic signing of documents directly on the platform.
+- **PDF Generation:** Automatic creation of professional PDF documents for signed onboarding and handover forms.
 
 ---
 
 ## 🛠 Planned Features (Roadmap)
 ### Phase 1 – Core Rental Management
-- Clients, Properties, Contracts
-- Rental Payment Reconciliation:
-  - Tenant payments
-  - Landlord payments
-  - Building administration fees (if applicable)
-  - Repairs and improvements
-  - Real estate commission invoicing
-- Access control by role (admin, agent, assistant)
+The next major development is the **Lease Management Module**, which will automate the entire lifecycle of a rental agreement.
+
+### Phase 1 – Contract & Terms Management
+- [ ] Creation of **Mandate (Owner)** and **Lease (Tenant)** contracts.
+- [ ] Definition of economic terms: rent amount, commission percentage, and scheduled (e.g., admin fees) and unscheduled (e.g., repairs) discounts.
+
+### Phase 2 – Monthly Cycle Automation
+- [ ] **Automatic invoicing** for tenants at the beginning of each month.
+- [ ] **Payment verification and sending automatic reminders** to tenants with overdue payments.
+- [ ] **Automatic calculation** of the monthly payout for each property owner.
+
+### Phase 3 – Payouts & Financial Documentation
+- [ ] Generation of **batch payment files** to facilitate mass payouts to owners via their bank.
+- [ ] Automatic generation of the **Egress Voucher** (detailed payout statement) and the **Commission Invoice** for the owner.
+
 
 ### Phase 2 – Integrations & Automation
 - Integration with accounting systems (to be defined)
-- Automated commission invoicing
 
 ### Phase 3 – AI-Powered Real Estate Assistant
 - AI module for property-specific market analysis
@@ -51,8 +68,10 @@ Designed with a **modular architecture** to integrate all essential services req
 ---
 
 ## 📂 Current Modules
-- **Inventory Management** – Complete from AppInventarios, including dynamic form builder, digital signatures, and PDF reports.
-- **Multi-Tenant Core** – Tenant-based data isolation for multiple real estate agencies.
+- **`usuarios`**: Core of the multi-tenancy system, profiles, and agencies.
+- **`core_inmobiliario`**: Models and logic for clients and properties.
+- **`inventarioapp`**: Business workflows for onboarding and handover inventories.
+- **`gestion_arriendos`**: (In development) Module for lease contract administration.
 
 ---
 
