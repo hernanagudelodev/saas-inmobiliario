@@ -4,30 +4,14 @@ from usuarios.models import Inmobiliaria
 from core_inmobiliario.models import Propiedad, Cliente
 
 # ==============================================================================
-# MODELOS DE CONFIGURACIÓN Y PARÁMETROS
+# MODELO DE CONFIGURACIÓN OPERATIVA
 # ==============================================================================
-
-class IPCAnual(models.Model):
-    """
-    PORQUÉ: Almacena los valores históricos del IPC (Índice de Precios al Consumidor).
-    - Permite automatizar el cálculo del incremento anual del canon en contratos de vivienda.
-    - Desacopla un dato externo y variable del resto de la lógica.
-    - Cada inmobiliaria (tenant) gestiona sus propios valores de IPC.
-    """
-    anio = models.PositiveIntegerField(unique=True)
-    valor = models.DecimalField(max_digits=5, decimal_places=2, help_text="Valor porcentual del IPC (ej. 5.62 para 5.62%)")
-    inmobiliaria = models.ForeignKey(Inmobiliaria, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"IPC {self.anio}: {self.valor}%"
-    
 
 class ConfiguracionArriendos(models.Model):
     """
     PORQUÉ: Centraliza las políticas y reglas de negocio operativas de una inmobiliaria.
     - Evita "ensuciar" el modelo principal `usuarios.Inmobiliaria` con configuraciones específicas de este módulo.
     - Mantiene la app `gestion_arriendos` más autocontenida y modular.
-    - Facilita añadir nuevas configuraciones en el futuro sin alterar otros modelos.
     - Se conecta a cada Inmobiliaria a través de una relación uno a uno.
     """
     inmobiliaria = models.OneToOneField(
@@ -35,14 +19,10 @@ class ConfiguracionArriendos(models.Model):
         on_delete=models.CASCADE, 
         related_name='configuracion_arriendos'
     )
-
-    # Políticas de Cartera y Pagos
     dias_plazo_pago_defecto = models.PositiveIntegerField(
         default=5,
         help_text="Plazo por defecto (en días) que se usará al crear nuevos contratos."
     )
-
-    # Políticas Fiscales y de Facturación
     cobra_iva_comision = models.BooleanField(
         default=True,
         help_text="Indica si se debe calcular y añadir el IVA sobre la comisión de la inmobiliaria."
@@ -57,12 +37,25 @@ class ConfiguracionArriendos(models.Model):
         default=False,
         help_text="Activar si la inmobiliaria está obligada a emitir factura electrónica."
     )
-    
-    # Auditoría
     actualizado = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Configuración de Arriendos para {self.inmobiliaria.nombre}"
+
+# ==============================================================================
+# MODELOS DE PARÁMETROS Y PLANTILLAS
+# ==============================================================================
+
+class IPCAnual(models.Model):
+    """
+    PORQUÉ: Almacena los valores históricos del IPC para automatizar el cálculo del incremento anual.
+    """
+    anio = models.PositiveIntegerField(unique=True)
+    valor = models.DecimalField(max_digits=5, decimal_places=2, help_text="Valor porcentual del IPC (ej. 5.62 para 5.62%)")
+    inmobiliaria = models.ForeignKey(Inmobiliaria, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"IPC {self.anio}: {self.valor}%"
 
 class PlantillaContrato(models.Model):
     """
@@ -90,8 +83,9 @@ class PlantillaContrato(models.Model):
 
 class BaseContrato(models.Model):
     """
-    PORQUÉ: Utiliza la herencia abstracta de Django para evitar la duplicación de código.
-    - Contiene todos los campos y la lógica que son comunes tanto al Contrato de Mandato como al de Arrendamiento.
+    PORQUÉ: Utiliza la herencia abstracta de Django para evitar la duplicación de código y asegurar consistencia.
+    - Contiene todos los campos y la lógica que son comunes y transversales al "negocio" del arrendamiento,
+      aplicando tanto al acuerdo con el propietario como con el inquilino.
     - Mantiene el código limpio y sigue el principio DRY (Don't Repeat Yourself).
     - No crea una tabla en la base de datos; solo sirve como plantilla para otros modelos.
     """
@@ -109,21 +103,21 @@ class BaseContrato(models.Model):
     class UsoInmueble(models.TextChoices):
         VIVIENDA = 'VIVIENDA', 'Vivienda'
         COMERCIAL = 'COMERCIAL', 'Comercial'
-    
+
     class TipoIncremento(models.TextChoices):
         IPC = 'IPC', 'Basado en IPC'
         PORCENTAJE_FIJO = 'PORCENTAJE_FIJO', 'Porcentaje Fijo'
         IPC_MAS_PUNTOS = 'IPC_MAS_PUNTOS', 'IPC + Puntos Adicionales'
-
-    propiedad = models.ForeignKey(Propiedad, on_delete=models.PROTECT)
+        
+    # propiedad = models.ForeignKey(Propiedad, on_delete=models.PROTECT)
     inmobiliaria = models.ForeignKey(Inmobiliaria, on_delete=models.PROTECT)
     estado = models.CharField(max_length=20, choices=EstadoContrato.choices, default=EstadoContrato.VIGENTE)
     periodicidad = models.CharField(max_length=20, choices=Periodicidad.choices, default=Periodicidad.MENSUAL)
     uso_inmueble = models.CharField(max_length=20, choices=UsoInmueble.choices)
-    tipo_incremento = models.CharField(max_length=20, choices=TipoIncremento.choices, default=TipoIncremento.IPC)
-    valor_incremento = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Porcentaje o puntos a añadir al IPC.")
     renovacion_automatica = models.BooleanField(default=True)
     meses_preaviso = models.PositiveIntegerField(default=3, help_text="Meses de antelación para notificar la renovación/terminación.")
+    tipo_incremento = models.CharField(max_length=20, choices=TipoIncremento.choices, default=TipoIncremento.IPC)
+    valor_incremento = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Porcentaje o puntos a añadir al IPC.")
     observaciones = models.TextField(blank=True)
     plantilla_usada = models.ForeignKey(PlantillaContrato, on_delete=models.SET_NULL, null=True, blank=True)
     clausulas_adicionales = models.TextField(blank=True)
@@ -141,11 +135,14 @@ class ContratoMandato(BaseContrato):
     - Mantiene la base de datos normalizada y la lógica de negocio clara.
     - Es el eje central para el cálculo de liquidaciones.
     """
-
     propietario = models.ForeignKey(Cliente, on_delete=models.PROTECT)
     porcentaje_comision = models.DecimalField(max_digits=5, decimal_places=2)
     dia_corte_liquidaciones = models.PositiveIntegerField(default=5, validators=[MinValueValidator(1), MaxValueValidator(28)])
     asumir_impuestos = models.BooleanField(default=False)
+    inmobiliaria_paga_administracion = models.BooleanField(
+        default=True,
+        help_text="Marca esta casilla si en el acuerdo la inmobiliaria es responsable de pagar la administración."
+    )
 
     def __str__(self):
         return f"Mandato de {self.propiedad.direccion} con {self.propietario.nombre}"
@@ -159,13 +156,14 @@ class ContratoArrendamiento(BaseContrato):
     """
     arrendatario = models.ForeignKey(Cliente, on_delete=models.PROTECT)
     contrato_mandato = models.ForeignKey(ContratoMandato, on_delete=models.CASCADE, related_name="contratos_arrendamiento")
+    dias_plazo_pago = models.PositiveIntegerField(default=5)
     prorrateado = models.BooleanField(default=False, help_text="Indica si el primer pago corresponde a una fracción del mes.")
 
     def __str__(self):
         return f"Arrendamiento de {self.propiedad.direccion} a {self.arrendatario.nombre}"
 
 # ==============================================================================
-# MODELOS PARA HISTORIZACIÓN DE VALORES
+# MODELOS PARA HISTORIZACIÓN Y TRAZABILIDAD
 # ==============================================================================
 
 class VigenciaContrato(models.Model):
@@ -183,7 +181,7 @@ class VigenciaContrato(models.Model):
     tipo = models.CharField(max_length=20, choices=TipoVigencia.choices, default=TipoVigencia.INICIAL)
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField()
-    valor_canon = models.DecimalField(max_digits=12, decimal_places=2)
+    valor_canon = models.DecimalField(max_digits=12, decimal_places=2, help_text="Valor total que paga el arrendatario, incluida la administración si aplica.")
 
     class Meta:
         ordering = ['-fecha_inicio']
@@ -193,8 +191,31 @@ class VigenciaContrato(models.Model):
     def __str__(self):
         return f"{self.get_tipo_display()} ({self.fecha_inicio} a {self.fecha_fin}) - Canon: ${self.valor_canon}"
 
+class RegistroCobroMensual(models.Model): #Nuevo modelo
+    """
+    PORQUÉ: Es el "libro contable" de cuentas por cobrar. Representa cada obligación de pago mensual.
+    - La factura de cada mes se vincula a uno de estos registros, no al contrato, garantizando una trazabilidad perfecta.
+    """
+    class EstadoCobro(models.TextChoices):
+        PENDIENTE = 'PENDIENTE', 'Pendiente de Facturar'
+        FACTURADO = 'FACTURADO', 'Facturado'
+        PAGADO = 'PAGADO', 'Pagado'
+        EN_MORA = 'EN_MORA', 'En Mora'
+
+    vigencia = models.ForeignKey(VigenciaContrato, on_delete=models.CASCADE)
+    mes = models.PositiveIntegerField()
+    anio = models.PositiveIntegerField()
+    valor_canon = models.DecimalField(max_digits=12, decimal_places=2)
+    estado = models.CharField(max_length=20, choices=EstadoCobro.choices, default=EstadoCobro.PENDIENTE)
+    
+    class Meta:
+        unique_together = ('vigencia', 'mes', 'anio')
+
+    def __str__(self):
+        return f"Cobro de {self.mes}/{self.anio} para contrato {self.vigencia.contrato_arrendamiento.id}"
+
 # ==============================================================================
-# MODELOS DE DESCUENTOS Y LIQUIDACIONES (A IMPLEMENTAR EN FUTURAS FASES)
+# MODELOS DE DESCUENTOS, CARGOS Y LIQUIDACIONES
 # ==============================================================================
 
 class DescuentoProgramado(models.Model):
@@ -206,6 +227,10 @@ class DescuentoProgramado(models.Model):
     contrato_mandato = models.ForeignKey(ContratoMandato, on_delete=models.CASCADE, related_name='descuentos_programados')
     concepto = models.CharField(max_length=255)
     inmobiliaria = models.ForeignKey(Inmobiliaria, on_delete=models.PROTECT)
+
+    # MODIFICADO: Se añade un período de validez para el descuento.
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField()
     
     def __str__(self):
         return f"{self.concepto} para contrato {self.contrato_mandato.id}"
@@ -221,17 +246,52 @@ class HistorialValorDescuento(models.Model):
 
     class Meta:
         ordering = ['-fecha_inicio_vigencia']
-        verbose_name = "Historial de Valor de Descuento"
-        verbose_name_plural = "Historiales de Valores de Descuentos"
+
+class RegistroDescuentoMensual(models.Model):
+    """
+    PORQUÉ: Es el "libro contable" de las obligaciones de descuento. Nace de tu idea de necesitar un estado.
+    - Cada registro es una obligación mensual específica (ej. "Descontar Administración de Marzo").
+    - Su estado (Pendiente/Aplicado) nos da la "memoria" para manejar descuentos que se registran tarde.
+    - La Liquidación se vinculará a estos registros, no al historial, garantizando una trazabilidad perfecta.
+    """
+    class EstadoDescuento(models.TextChoices):
+        PENDIENTE = 'PENDIENTE', 'Pendiente de Aplicar'
+        APLICADO = 'APLICADO', 'Aplicado en Liquidación'
+
+    descuento = models.ForeignKey(DescuentoProgramado, on_delete=models.CASCADE)
+    mes = models.PositiveIntegerField()
+    anio = models.PositiveIntegerField()
+    valor = models.DecimalField(max_digits=12, decimal_places=2, help_text="El valor que tenía el descuento en este mes específico.")
+    estado = models.CharField(max_length=20, choices=EstadoDescuento.choices, default=EstadoDescuento.PENDIENTE)
+
+    class Meta:
+        unique_together = ('descuento', 'mes', 'anio')
+        verbose_name = "Registro Mensual de Descuento"
+        verbose_name_plural = "Registros Mensuales de Descuentos"
 
     def __str__(self):
-        return f"Valor ${self.valor} desde {self.fecha_inicio_vigencia}"
+        return f"Descuento de {self.descuento.concepto} para {self.mes}/{self.anio}"
+
+
+class CargoAdicionalArrendatario(models.Model):
+    """
+    PORQUÉ: Modela los cobros únicos al inquilino (ej. multas, reparaciones a su cargo).
+    """
+    class EstadoCargo(models.TextChoices):
+        PENDIENTE = 'PENDIENTE', 'Pendiente de Cobro'
+        COBRADO = 'COBRADO', 'Cobrado'
+
+    contrato_arrendamiento = models.ForeignKey(ContratoArrendamiento, on_delete=models.CASCADE, related_name='cargos_adicionales')
+    concepto = models.CharField(max_length=255)
+    valor = models.DecimalField(max_digits=12, decimal_places=2)
+    estado = models.CharField(max_length=20, choices=EstadoCargo.choices, default=EstadoCargo.PENDIENTE)
+
+    def __str__(self):
+        return f"Cargo a {self.contrato_arrendamiento.arrendatario.nombre}: {self.concepto}"
 
 class DescuentoNoProgramado(models.Model):
     """
-    PORQUÉ: Modela los gastos únicos o en cuotas (ej. una reparación, una cuota extra).
-    - Es flexible para manejar tanto pagos de una sola vez como pagos diferidos.
-    - Su estado (Pendiente, Aplicado) es clave para la automatización del proceso de liquidación.
+    PORQUÉ: Modela los gastos únicos o en cuotas del propietario (ej. una reparación).
     """
     class EstadoDescuento(models.TextChoices):
         PENDIENTE = 'PENDIENTE', 'Pendiente de aplicar'
@@ -252,9 +312,7 @@ class DescuentoNoProgramado(models.Model):
 
 class Liquidacion(models.Model):
     """
-    PORQUÉ: Almacena la "foto" del resultado del cálculo de la liquidación mensual para un propietario.
-    - Crea un registro inmutable de cada pago, detallando todos sus componentes.
-    - Es la base para la generación del Comprobante de Egreso y la contabilidad.
+    PORQUÉ: Almacena la "foto" del cálculo de la liquidación mensual para un propietario.
     """
     contrato_mandato = models.ForeignKey(ContratoMandato, on_delete=models.PROTECT)
     mes_liquidado = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
