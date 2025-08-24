@@ -289,47 +289,94 @@ class CargoAdicionalArrendatario(models.Model):
     def __str__(self):
         return f"Cargo a {self.contrato_arrendamiento.arrendatario.nombre}: {self.concepto}"
 
+
 class DescuentoNoProgramado(models.Model):
     """
-    PORQUÉ: Modela los gastos únicos o en cuotas del propietario (ej. una reparación).
+    PORQUÉ: Modela el "encabezado" de un gasto único o esporádico (ej. una reparación).
+    - Define el concepto general, el valor total y el número de cuotas en que se dividirá.
+    - Ya no contiene un estado; el estado ahora vive en cada cuota individual.
     """
-    class EstadoDescuento(models.TextChoices):
-        PENDIENTE = 'PENDIENTE', 'Pendiente de aplicar'
-        APLICADO = 'APLICADO', 'Aplicado en liquidación'
-        POSPUESTO = 'POSPUESTO', 'Pospuesto para siguiente mes'
-
     contrato_mandato = models.ForeignKey(ContratoMandato, on_delete=models.CASCADE, related_name='descuentos_no_programados')
     concepto = models.CharField(max_length=255)
     valor_total = models.DecimalField(max_digits=12, decimal_places=2)
     numero_cuotas = models.PositiveIntegerField(default=1)
-    cuotas_aplicadas = models.PositiveIntegerField(default=0)
-    estado = models.CharField(max_length=20, choices=EstadoDescuento.choices, default=EstadoDescuento.PENDIENTE)
     fecha_reporte = models.DateField()
     inmobiliaria = models.ForeignKey(Inmobiliaria, on_delete=models.PROTECT)
 
     def __str__(self):
-        return f"{self.concepto} (${self.valor_total})"
+        return f"{self.concepto} (${self.valor_total} en {self.numero_cuotas} cuota(s))"
+
+
+class CuotaDescuentoNoProgramado(models.Model):
+    """
+    PORQUÉ: Es el "libro contable" para las cuotas de los descuentos no programados. Nace de tu idea de unificar la lógica.
+    - Cada registro es una obligación de descuento específica (ej. "Cuota 1 de 3 de Reparación Plomería para Marzo").
+    - Su estado (Pendiente/Aplicado) nos da la "memoria" para manejar la aplicación de cada cuota.
+    - La Liquidación se vinculará a estos registros, garantizando una trazabilidad perfecta, tal como lo sugeriste.
+    """
+    class EstadoCuota(models.TextChoices):
+        PENDIENTE = 'PENDIENTE', 'Pendiente de Aplicar'
+        APLICADO = 'APLICADO', 'Aplicado en Liquidación'
+
+    descuento_no_programado = models.ForeignKey(DescuentoNoProgramado, on_delete=models.CASCADE, related_name='cuotas')
+    mes = models.PositiveIntegerField()
+    anio = models.PositiveIntegerField()
+    valor_cuota = models.DecimalField(max_digits=12, decimal_places=2)
+    estado = models.CharField(max_length=20, choices=EstadoCuota.choices, default=EstadoCuota.PENDIENTE)
+    
+    class Meta:
+        unique_together = ('descuento_no_programado', 'mes', 'anio')
+        verbose_name = "Cuota de Descuento No Programado"
+        verbose_name_plural = "Cuotas de Descuentos No Programados"
+
+    def __str__(self):
+        return f"Cuota de {self.descuento_no_programado.concepto} para {self.mes}/{self.anio}"
+
+# gestion_arriendos/models.py
+
+# ... (El resto de tus modelos se mantienen igual) ...
 
 class Liquidacion(models.Model):
     """
-    PORQUÉ: Almacena la "foto" del cálculo de la liquidación mensual para un propietario.
+    PORQUÉ: Almacena la "foto" inmutable del cálculo de la liquidación mensual para un propietario.
+    - Actúa como el pre-comprobante de egreso, registrando no solo los totales, sino también
+      los vínculos explícitos a cada obligación de descuento que se aplicó.
+    - Es la base para la contabilidad, la auditoría y la generación de informes.
     """
-    contrato_mandato = models.ForeignKey(ContratoMandato, on_delete=models.PROTECT)
+    contrato_mandato = models.ForeignKey(ContratoMandato, on_delete=models.PROTECT, related_name='liquidaciones')
     mes_liquidado = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
     anio_liquidado = models.PositiveIntegerField()
-    valor_arriendo_cobrado = models.DecimalField(max_digits=12, decimal_places=2)
+
+    # --- Totales Calculados (La "foto" del momento) ---
+    valor_arriendo_cobrado = models.DecimalField(max_digits=12, decimal_places=2, help_text="Canon cobrado al arrendatario en este período.")
     total_descuentos_programados = models.DecimalField(max_digits=12, decimal_places=2)
     total_descuentos_no_programados = models.DecimalField(max_digits=12, decimal_places=2)
     valor_comision = models.DecimalField(max_digits=12, decimal_places=2)
     iva_comision = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total_a_pagar = models.DecimalField(max_digits=12, decimal_places=2)
-    descuentos_aplicados = models.ManyToManyField(DescuentoNoProgramado, blank=True)
+    total_a_pagar = models.DecimalField(max_digits=12, decimal_places=2, help_text="El valor final a pagar al propietario.")
+
+    # --- Trazabilidad (La Clave de la Auditoría) ---
+    # Vínculo a los registros de "obligaciones" que se aplicaron en este cálculo.
+    descuentos_programados_aplicados = models.ManyToManyField(
+        'RegistroDescuentoMensual', 
+        blank=True,
+        related_name="liquidaciones"
+    )
+    descuentos_no_programados_aplicados = models.ManyToManyField(
+        'CuotaDescuentoNoProgramado', 
+        blank=True,
+        related_name="liquidaciones"
+    )
+
+    # --- Estado del Pago ---
     pagada = models.BooleanField(default=False)
     fecha_pago = models.DateField(null=True, blank=True)
     inmobiliaria = models.ForeignKey(Inmobiliaria, on_delete=models.PROTECT)
 
     class Meta:
         unique_together = ('contrato_mandato', 'mes_liquidado', 'anio_liquidado')
+        verbose_name = "Liquidación Mensual"
+        verbose_name_plural = "Liquidaciones Mensuales"
 
     def __str__(self):
         return f"Liquidación para {self.contrato_mandato.propiedad.direccion} - {self.mes_liquidado}/{self.anio_liquidado}"
