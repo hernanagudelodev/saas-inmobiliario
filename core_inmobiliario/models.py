@@ -59,6 +59,7 @@ class Propiedad(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    escritura_publica = models.CharField(max_length=200, blank=True, help_text='Número de escritura pública, fecha de expedición, notaría y ciudad')
 
     class Meta:
         verbose_name = 'Propiedad'
@@ -100,3 +101,38 @@ class PropiedadCliente(models.Model):
     def __str__(self):
         return f'El cliente {self.cliente} es {self.get_relacion_display()} de la {self.propiedad}'
 
+# =======================
+# CUENTAS BANCARIAS
+# =======================
+
+class CuentaBancaria(models.Model):
+    """
+    PORQUÉ: Almacena los datos bancarios de un cliente (propietario) de forma segura y separada.
+    - Evita añadir campos bancarios al modelo Cliente, que es genérico para propietarios y arrendatarios.
+    - Permite que un cliente pueda tener múltiples cuentas en el futuro si es necesario.
+    - Se vincula directamente con el Cliente, manteniendo la información centralizada en la app 'core_inmobiliario'.
+    """
+    class TipoCuenta(models.TextChoices):
+        AHORROS = 'AHORROS', 'Ahorros'
+        CORRIENTE = 'CORRIENTE', 'Corriente'
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='cuentas_bancarias')
+    nombre_banco = models.CharField(max_length=200)
+    tipo_cuenta = models.CharField(max_length=20, choices=TipoCuenta.choices)
+    numero_cuenta = models.CharField(max_length=50)
+    nombre_titular = models.CharField(max_length=255, blank=True)
+    identificacion_titular = models.CharField(max_length=50, blank=True)
+    
+    # Este campo permite marcar una cuenta como la principal para los pagos
+    es_predeterminada = models.BooleanField(default=True)
+    
+    # Auditoría
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Cuenta Bancaria'
+        verbose_name_plural = 'Cuentas Bancarias'
+
+    def __str__(self):
+        return f"Cuenta de {self.cliente.nombre} en {self.nombre_banco}"

@@ -109,7 +109,7 @@ class BaseContrato(models.Model):
         PORCENTAJE_FIJO = 'PORCENTAJE_FIJO', 'Porcentaje Fijo'
         IPC_MAS_PUNTOS = 'IPC_MAS_PUNTOS', 'IPC + Puntos Adicionales'
         
-    # propiedad = models.ForeignKey(Propiedad, on_delete=models.PROTECT)
+    propiedad = models.ForeignKey(Propiedad, on_delete=models.PROTECT)
     inmobiliaria = models.ForeignKey(Inmobiliaria, on_delete=models.PROTECT)
     estado = models.CharField(max_length=20, choices=EstadoContrato.choices, default=EstadoContrato.VIGENTE)
     periodicidad = models.CharField(max_length=20, choices=Periodicidad.choices, default=Periodicidad.MENSUAL)
@@ -139,6 +139,7 @@ class ContratoMandato(BaseContrato):
     porcentaje_comision = models.DecimalField(max_digits=5, decimal_places=2)
     dia_corte_liquidaciones = models.PositiveIntegerField(default=5, validators=[MinValueValidator(1), MaxValueValidator(28)])
     asumir_impuestos = models.BooleanField(default=False)
+    cuenta_bancaria_pago = models.ForeignKey('core_inmobiliario.CuentaBancaria', on_delete=models.PROTECT, help_text="Cuenta bancaria donde se consignará el pago al propietario.")
     inmobiliaria_paga_administracion = models.BooleanField(
         default=True,
         help_text="Marca esta casilla si en el acuerdo la inmobiliaria es responsable de pagar la administración."
@@ -332,9 +333,6 @@ class CuotaDescuentoNoProgramado(models.Model):
     def __str__(self):
         return f"Cuota de {self.descuento_no_programado.concepto} para {self.mes}/{self.anio}"
 
-# gestion_arriendos/models.py
-
-# ... (El resto de tus modelos se mantienen igual) ...
 
 class Liquidacion(models.Model):
     """

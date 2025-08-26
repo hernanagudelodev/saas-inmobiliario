@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}
+  Listado de Contratos
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1100px;">
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+      <h4 class="mb-0"><i class="bi bi-file-text-fill"></i> Listado de Contratos de Mandato</h4>
+      <a href="{% url 'gestion_arriendos:crear_contrato_mandato' %}" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Nuevo Contrato
+      </a>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-striped align-middle">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Propiedad</th>
+              <th>Propietario</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for contrato in contratos %}
+              <tr>
+                <td>{{ contrato.id }}</td>
+                <td>{{ contrato.propiedad.direccion }}</td>
+                <td>{{ contrato.propietario.nombre }}</td>
+                <td>
+                  {% if contrato.estado == 'VIGENTE' %}
+                    <span class="badge bg-success">{{ contrato.get_estado_display }}</span>
+                  {% else %}
+                    <span class="badge bg-secondary">{{ contrato.get_estado_display }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a href="#" class="btn btn-sm btn-outline-primary disabled">Ver Detalles</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="text-center text-muted">Aún no hay contratos creados.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      </div>
+  </div>
+</div>
+{% endblock %}

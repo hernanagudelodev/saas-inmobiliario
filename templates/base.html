@@ -89,6 +89,9 @@
           <a class="nav-link" href="{% url 'inventarioapp:home' %}"><i class="bi bi-archive"></i> Inventarios</a>
         </li>
         <li class="nav-item">
+          <a class="nav-link" href="{% url 'gestion_arriendos:home' %}"><i class="bi bi-file-text-fill"></i> Arriendos</a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" href="{% url 'core_inmobiliario:lista_clientes' %}"><i class="bi bi-people"></i> Clientes</a>
         </li>
         <li class="nav-item">
@@ -115,6 +118,11 @@
             <li class="nav-item">
               <a class="nav-link {% if section == 'inventarios' %}active{% endif %}" href="{% url 'inventarioapp:home' %}">
                 <i class="bi bi-archive"></i> Inventarios
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if section == 'arriendos' %}active{% endif %}" href="{% url 'gestion_arriendos:home' %}">
+                <i class="bi bi-file-text-fill"></i> Arriendos
               </a>
             </li>
             <li class="nav-item">

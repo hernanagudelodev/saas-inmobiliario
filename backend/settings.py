@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     'rest_framework',  # API (futuro)
     'usuarios',            # App para administrar usuarios, roles, permisos y inmobiliarias (multitenencia)
     'core_inmobiliario', #App que administra todos los modelos base que son comunes a todos los modulos: cliente propiedades, etc.
-    'inventarioapp'
+    'inventarioapp',
+    'gestion_arriendos'
 ]
 
 MIDDLEWARE = [

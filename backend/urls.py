@@ -24,6 +24,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('inventarios/', include('inventarioapp.urls')),
     path('usuarios/', include('django.contrib.auth.urls')),
+    path('arriendos/', include('gestion_arriendos.urls')),
     path('usuarios/', include('usuarios.urls')),
     path('', include('core_inmobiliario.urls')),
 ]

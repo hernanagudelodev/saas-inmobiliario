@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Plantillas de Contrato{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1100px;">
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+      <h4 class="mb-0"><i class="bi bi-journal-text"></i> Plantillas de Contrato</h4>
+      <a href="{% url 'gestion_arriendos:crear_plantilla' %}" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Nueva Plantilla
+      </a>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-striped align-middle">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for plantilla in plantillas %}
+              <tr>
+                <td>{{ plantilla.nombre }}</td>
+                <td>{{ plantilla.get_tipo_contrato_display }}</td>
+                <td>
+                  <a href="#" class="btn btn-sm btn-outline-primary disabled">Editar</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="3" class="text-center text-muted">Aún no has creado ninguna plantilla.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
