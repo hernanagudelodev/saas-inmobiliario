@@ -1,13 +1,17 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth.decorators import login_required
-from django.views.generic import ListView, CreateView
+from django.template import Context, Template, engines
+from django.views.generic import ListView, CreateView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
+
+from core_inmobiliario.models import Propiedad
+from inventarioapp.models import FormularioCaptacion
 from .models import ContratoMandato, PlantillaContrato
 from usuarios.mixins import TenantRequiredMixin
 from .forms import ContratoMandatoForm, PlantillaContratoForm
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy
+from django.template.loader import render_to_string
 
 @login_required
 def home(request):
@@ -33,32 +37,126 @@ class ListaContratos(LoginRequiredMixin, TenantRequiredMixin, ListView):
         return context
     
 @login_required
-def crear_contrato_mandato(request):
+def crear_contrato_mandato(request, propiedad_id):
+    inmobiliaria = request.user.profile.inmobiliaria
+    propiedad = get_object_or_404(Propiedad, id=propiedad_id, inmobiliaria=inmobiliaria)
+    
+    ultima_captacion = FormularioCaptacion.objects.filter(
+        propiedad_cliente__propiedad=propiedad,
+        is_firmado=True,
+        propiedad_cliente__relacion__in=['PR', 'AP']
+    ).order_by('-fecha_firma').first()
+
+    if not ultima_captacion:
+        messages.error(request, "No se puede crear un contrato. Primero debe existir una captación firmada con un propietario o apoderado.")
+        return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
+    
+    propietario = ultima_captacion.propiedad_cliente.cliente
+
     if request.method == 'POST':
-        form = ContratoMandatoForm(request.POST)
+        # Pasamos la inmobiliaria al formulario
+        form = ContratoMandatoForm(request.POST, inmobiliaria=inmobiliaria)
         if form.is_valid():
             contrato = form.save(commit=False)
-            try:
-                contrato.inmobiliaria = request.user.profile.inmobiliaria
-            except Exception:
-                raise PermissionDenied("El usuario no tiene una inmobiliaria asignada.")
+            contrato.propiedad = propiedad
+            contrato.propietario = propietario
+            contrato.inmobiliaria = inmobiliaria
             
-            # Aquí podrías añadir más lógica, como estado inicial, etc.
-            # Por ahora, lo guardamos directamente.
+            
             contrato.save()
-            
-            messages.success(request, "Contrato de Mandato creado exitosamente.")
-            # Eventualmente, esto redirigirá al siguiente paso del "wizard" (crear el Contrato de Arrendamiento)
-            # Por ahora, redirigimos a la lista de contratos.
-            return redirect('gestion_arriendos:lista_contratos')
+            messages.success(request, "Borrador del Contrato de Mandato creado exitosamente.")
+            # Redirigimos al detalle del contrato para el siguiente paso
+            return redirect('gestion_arriendos:detalle_contrato_mandato', pk=contrato.pk)
     else:
-        form = ContratoMandatoForm()
+        # Pasamos la inmobiliaria al formulario para que filtre las plantillas
+        form = ContratoMandatoForm(inmobiliaria=inmobiliaria)
+        form.fields['cuenta_bancaria_pago'].queryset = propietario.cuentas_bancarias.all()
 
     context = {
         'form': form,
+        'propiedad': propiedad,
+        'propietario': propietario,
         'section': 'arriendos'
     }
     return render(request, 'gestion_arriendos/crear_contrato_mandato.html', context)
+
+
+class DetalleContratoMandato(LoginRequiredMixin, TenantRequiredMixin, DetailView):
+    model = ContratoMandato
+    template_name = 'gestion_arriendos/detalle_contrato_mandato.html'
+    context_object_name = 'contrato'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['section'] = 'arriendos'
+
+        contrato = self.get_object()
+
+        if contrato.estado == 'BORRADOR':
+            plantilla_obj = contrato.plantilla_usada
+            template_string = "{% load letras_numeros %}" +plantilla_obj.cuerpo_texto
+
+            contexto_render = {
+                "propietario": contrato.propietario,
+                "propiedad": contrato.propiedad,
+                "inmobiliaria": contrato.inmobiliaria,
+                "contrato": contrato
+            }
+
+            # Renderizamos primero las cláusulas del contrato
+            template = engines['django'].from_string("{% load letras_numeros %}" + template_string)
+            clausulas_renderizadas = template.render(contexto_render)
+
+            # Ahora, pasamos las cláusulas a la plantilla maestra para generar el HTML completo
+            contexto_final = {
+                'inmobiliaria': contrato.inmobiliaria,
+                'cuerpo_renderizado': clausulas_renderizadas
+            }
+            html_completo = render_to_string('gestion_arriendos/base_contrato_pdf.html', contexto_final)
+            context['texto_borrador_renderizado'] = html_completo
+
+        return context
+
+@login_required
+def finalizar_contrato_mandato(request, contrato_id):
+    # Obtenemos el contrato, asegurándonos que pertenece al usuario
+    contrato = get_object_or_404(ContratoMandato, id=contrato_id, inmobiliaria=request.user.profile.inmobiliaria)
+
+    # Solo se puede finalizar si está en estado borrador
+    if contrato.estado != 'BORRADOR':
+        messages.error(request, "Este contrato ya ha sido finalizado y no puede modificarse.")
+        return redirect('gestion_arriendos:detalle_contrato_mandato', pk=contrato.id)
+
+    # Usamos la plantilla que se guardó en el borrador
+    plantilla_obj = contrato.plantilla_usada
+    template_string = "{% load letras_numeros %}" + plantilla_obj.cuerpo_texto
+
+    contexto_render = {
+        "propietario": contrato.propietario,
+        "propiedad": contrato.propiedad,
+        "inmobiliaria": contrato.inmobiliaria,
+        "contrato": contrato
+    }
+
+     # Renderizamos las cláusulas
+    template = engines['django'].from_string(template_string)
+    clausulas_renderizadas = template.render(contexto_render)
+
+    # Renderizamos la plantilla maestra para el guardado final
+    contexto_final = {
+        'inmobiliaria': contrato.inmobiliaria,
+        'cuerpo_renderizado': clausulas_renderizadas
+    }
+    texto_renderizado = render_to_string('gestion_arriendos/base_contrato_pdf.html', contexto_final)
+    
+    contrato.texto_final_renderizado = texto_renderizado
+    contrato.estado = 'FINALIZADO'
+    contrato.save()
+
+    messages.success(request, "El contrato ha sido finalizado y está listo para ser firmado.")
+    return redirect('gestion_arriendos:detalle_contrato_mandato', pk=contrato.id)
+
+''' Plantillas contratos '''
 
 class ListaPlantillas(LoginRequiredMixin, TenantRequiredMixin, ListView):
     model = PlantillaContrato
@@ -70,13 +168,36 @@ class ListaPlantillas(LoginRequiredMixin, TenantRequiredMixin, ListView):
         context['section'] = 'arriendos'
         return context
 
-# gestion_arriendos/views.py
 
+# Crear plantilla de contrato.
 class CrearPlantilla(LoginRequiredMixin, TenantRequiredMixin, CreateView):
     model = PlantillaContrato
     form_class = PlantillaContratoForm
     template_name = 'gestion_arriendos/crear_plantilla.html'
     success_url = reverse_lazy('gestion_arriendos:lista_plantillas')
+
+    def form_valid(self, form):
+        """
+        Este método se ejecuta cuando el formulario es válido.
+        Usamos commit=False para poder añadir la inmobiliaria antes de guardar.
+        """
+        # 1. Crea el objeto en memoria, pero NO lo guardes en la BD todavía.
+        plantilla = form.save(commit=False)
+        
+        # 2. Asigna la inmobiliaria del usuario actual al objeto.
+        plantilla.inmobiliaria = self.request.user.profile.inmobiliaria
+        
+        # 3. Ahora que el objeto está completo, guárdalo en la BD.
+        plantilla.save()
+
+        # 4. ASIGNA EL OBJETO A LA VISTA. ¡Este es el paso que faltaba!
+        self.object = plantilla
+
+        # 5. Muestra un mensaje de éxito para el usuario.
+        messages.success(self.request, "Plantilla de contrato creada exitosamente.")
+
+        # 6. Redirige a la página de éxito.
+        return redirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Ciudad, TipoPropiedad, Cliente, Propiedad, PropiedadCliente
+from .models import Ciudad, CuentaBancaria, TipoPropiedad, Cliente, Propiedad, PropiedadCliente
 
 @admin.register(Ciudad)
 class CiudadAdmin(admin.ModelAdmin):
@@ -30,3 +30,9 @@ class PropiedadClienteAdmin(admin.ModelAdmin):
     list_display = ['cliente', 'propiedad', 'relacion', 'inmobiliaria']
     list_filter = ['relacion', 'inmobiliaria']
     search_fields = ['cliente__nombre', 'propiedad__direccion']
+
+@admin.register(CuentaBancaria)
+class CuentaBancariaAdmin(admin.ModelAdmin):
+    list_display = ['cliente', 'tipo_cuenta', 'numero_cuenta', 'nombre_banco']
+    list_filter = ['tipo_cuenta']
+    search_fields = ['cliente__nombre', 'numero_cuenta', 'nombre_banco']

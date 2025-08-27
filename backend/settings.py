@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'usuarios',            # App para administrar usuarios, roles, permisos y inmobiliarias (multitenencia)
     'core_inmobiliario', #App que administra todos los modelos base que son comunes a todos los modulos: cliente propiedades, etc.
     'inventarioapp',
-    'gestion_arriendos'
+    'gestion_arriendos.apps.GestionArriendosConfig', 
 ]
 
 MIDDLEWARE = [

@@ -90,9 +90,11 @@ class BaseContrato(models.Model):
     - No crea una tabla en la base de datos; solo sirve como plantilla para otros modelos.
     """
     class EstadoContrato(models.TextChoices):
-        VIGENTE = 'VIGENTE', 'Vigente'
-        FINALIZADO = 'FINALIZADO', 'Finalizado'
-        CANCELADO = 'CANCELADO', 'Cancelado'
+        BORRADOR = 'BORRADOR', 'Borrador' # El contrato se acaba de crear. Sus términos comerciales (comisión, fechas, etc.) se pueden editar.
+        FINALIZADO = 'FINALIZADO', 'Finalizado (Pendiente de Firma)' # Se ha generado el texto legal a partir de la plantilla. Ya no se puede editar. Está listo y pendiente de las firmas.
+        VIGENTE = 'VIGENTE', 'Vigente (Firmado y Activo)' # El contrato ya fue firmado y se encuentra dentro de su período de ejecución (entre la fecha de inicio y fin).
+        TERMINADO = 'TERMINADO', 'Terminado' # El contrato cumplió su ciclo y finalizó de forma natural.
+        CANCELADO = 'CANCELADO', 'Cancelado' # El contrato se terminó de forma anticipada.
 
     class Periodicidad(models.TextChoices):
         MENSUAL = 'MENSUAL', 'Mensual'
@@ -111,7 +113,7 @@ class BaseContrato(models.Model):
         
     propiedad = models.ForeignKey(Propiedad, on_delete=models.PROTECT)
     inmobiliaria = models.ForeignKey(Inmobiliaria, on_delete=models.PROTECT)
-    estado = models.CharField(max_length=20, choices=EstadoContrato.choices, default=EstadoContrato.VIGENTE)
+    estado = models.CharField(max_length=20, choices=EstadoContrato.choices, default=EstadoContrato.BORRADOR)
     periodicidad = models.CharField(max_length=20, choices=Periodicidad.choices, default=Periodicidad.MENSUAL)
     uso_inmueble = models.CharField(max_length=20, choices=UsoInmueble.choices)
     renovacion_automatica = models.BooleanField(default=True)
@@ -121,7 +123,13 @@ class BaseContrato(models.Model):
     observaciones = models.TextField(blank=True)
     plantilla_usada = models.ForeignKey(PlantillaContrato, on_delete=models.SET_NULL, null=True, blank=True)
     clausulas_adicionales = models.TextField(blank=True)
-    texto_final_renderizado = models.TextField(editable=False, help_text="El texto final del contrato tal como se firmó, para integridad legal.")
+    # PERMITIMOS QUE EL TEXTO ESTÉ VACÍO INICIALMENTE
+    texto_final_renderizado = models.TextField(
+        editable=False, 
+        help_text="El texto final del contrato tal como se firmó, para integridad legal.",
+        blank=True, # Puede estar vacío
+        null=True   # Permite valores nulos en la BD
+    )
     creado = models.DateTimeField(auto_now_add=True)
     actualizado = models.DateTimeField(auto_now=True)
 

@@ -1,5 +1,3 @@
-# gestion_arriendos/templatetags/letras_numeros.py
-
 from django import template
 from num2words import num2words
 

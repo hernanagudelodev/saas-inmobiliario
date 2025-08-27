@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load letras_numeros %}
+
+{% block title %}Detalle del Contrato de Mandato{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px;">
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">
+        <i class="bi bi-file-text-fill"></i> Contrato de Mandato: {{ contrato.propiedad.direccion }}
+      </h4>
+      <span class="badge bg-light text-dark fs-6">{{ contrato.get_estado_display }}</span>
+    </div>
+    <div class="card-body">
+      <h5 class="card-title">Propietario: {{ contrato.propietario.nombre }}</h5>
+      <hr>
+
+      {% if contrato.estado == 'BORRADOR' %}
+        <div class="alert alert-warning">
+          <h5 class="alert-heading"><i class="bi bi-eye"></i> Previsualización del Contrato</h5>
+          <p>Este es el borrador del contrato. Revisa el texto y, si todo es correcto, finalízalo para proceder con la firma. Recuerda que los términos aún se pueden editar (próximamente).</p>
+        </div>
+
+        <div class="contrato-texto border p-3 bg-light mb-4" style="white-space: pre-wrap; font-family: serif; font-size: 1.1em;">
+          {{ texto_borrador_renderizado|safe }}
+        </div>
+
+        <div class="mt-4 text-center">
+            <a href="#" class="btn btn-secondary disabled">Editar Términos (Próximamente)</a>
+            <a href="{% url 'gestion_arriendos:finalizar_contrato_mandato' contrato.id %}" class="btn btn-success">
+                <i class="bi bi-check-circle"></i> Generar y Finalizar Contrato
+            </a>
+        </div>
+
+      {% else %}
+        <div class="contrato-texto border p-3 bg-light" style="white-space: pre-wrap; font-family: serif; font-size: 1.1em;">
+          {{ contrato.texto_final_renderizado|safe }}
+        </div>
+
+        <div class="mt-4">
+          <h5 class="mb-3">Firma del Contrato</h5>
+          <div class="alert alert-info">
+            <i class="bi bi-vector-pen"></i> La funcionalidad de firma digital se agregará aquí.
+          </div>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}

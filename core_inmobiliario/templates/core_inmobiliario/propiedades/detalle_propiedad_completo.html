@@ -44,8 +44,6 @@
     </div>
   </div>
 
-  <!-- ...Resto del template sin cambios... (Clientes asociados, Captaciones, Entregas, etc.) -->
-
   <!-- Clientes asociados -->
   <div class="card mb-4">
     <div class="card-header">
@@ -193,6 +191,20 @@
       {% else %}
         <span class="text-secondary" title="Debe existir una captación firmada">No disponible (requiere captación firmada)</span>
       {% endif %}
+    </div>
+  </div>
+  <!-- Sección de contratos de mandato para la propiedad -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <strong><i class="bi bi-file-text-fill"></i> Contratos de Mandato</strong>
+    </div>
+    <div class="card-body p-2">
+      {# Aquí eventualmente listaremos los contratos existentes #}
+      <p class="text-muted">Aún no hay contratos de mandato para esta propiedad.</p>
+      
+      <a href="{% url 'gestion_arriendos:crear_contrato_mandato' propiedad.id %}" class="btn btn-outline-success btn-sm mt-2">
+        <i class="bi bi-plus-circle"></i> Nuevo Contrato de Mandato
+      </a>
     </div>
   </div>
 
