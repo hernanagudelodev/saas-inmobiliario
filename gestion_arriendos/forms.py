@@ -44,7 +44,7 @@ class ContratoMandatoForm(forms.ModelForm):
 class PlantillaContratoForm(forms.ModelForm):
     class Meta:
         model = PlantillaContrato
-        fields = ['nombre', 'tipo_contrato', 'cuerpo_texto']
+        fields = ['nombre','titulo', 'tipo_contrato', 'cuerpo_texto']
         widgets = {
             'cuerpo_texto': forms.Textarea(attrs={'rows': 15}),
         }

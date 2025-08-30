@@ -70,6 +70,10 @@ class PlantillaContrato(models.Model):
 
     inmobiliaria = models.ForeignKey(Inmobiliaria, on_delete=models.CASCADE)
     nombre = models.CharField(max_length=255)
+    titulo = models.CharField(
+        max_length=255, 
+        help_text="El título principal que aparecerá en el documento (ej: CONTRATO DE MANDATO)"
+    )
     tipo_contrato = models.CharField(max_length=20, choices=TipoContrato.choices)
     cuerpo_texto = models.TextField(help_text="Cuerpo de la plantilla. Usa variables como {{cliente_nombre}}.")
     creado = models.DateTimeField(auto_now_add=True)

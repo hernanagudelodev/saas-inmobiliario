@@ -13,7 +13,7 @@ class IPCAnualAdmin(admin.ModelAdmin):
 
 @admin.register(PlantillaContrato)
 class PlantillaContratoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'tipo_contrato', 'inmobiliaria', 'creado')
+    list_display = ('nombre', 'titulo', 'tipo_contrato', 'inmobiliaria', 'creado')
     list_filter = ('inmobiliaria', 'tipo_contrato')
 
 # --- CONTRATOS ---

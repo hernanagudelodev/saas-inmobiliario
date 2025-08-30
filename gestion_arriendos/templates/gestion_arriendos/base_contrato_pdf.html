@@ -3,15 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <title>Contrato de Mandato</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
     <style>
-        body { font-family: Arial, sans-serif; font-size: 13px; margin: 24px 24px 48px 24px;}
-        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 25px;}
-        .logo { max-height: 60px; }
-        .title { font-size: 1.7em; font-weight: bold; }
-        .contrato-cuerpo { white-space: pre-wrap; font-family: serif; font-size: 1.1em; line-height: 1.5; }
+        @page {
+            size: letter;
+            margin: 2cm;
+            @bottom-center {
+                content: "Página " counter(page) " de " counter(pages);
+            }
+        }
+
+        body { 
+            /* 2. Usamos la nueva fuente importada */
+            font-family: 'Roboto', sans-serif;
+            font-size: 11px; /* Un poco más pequeño para que quepa bien */
+        }
+
+        .header { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            border-bottom: 2px solid #333; 
+            padding-bottom: 10px; 
+            margin-bottom: 25px;
+        }
+        .logo { max-height: 50px; } /* Un poco más pequeño */
+        .title { font-size: 1.4em; font-weight: bold; }
+
+        .contrato-titulo {
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 25px;
+        }
+
+        .contrato-cuerpo { 
+            /* 3. Simplificamos la regla, eliminando white-space que puede interferir */
+            line-height: 1.6;
+            text-align: justify;
+        }
+        
+        .watermark {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            color: rgba(255, 0, 0, 0.15); /* Más sutil */
+            font-size: 100px; font-weight: bold;
+            z-index: -1000; text-align: center;
+            opacity: 0.5; pointer-events: none;
+        }
     </style>
 </head>
 <body>
+    {% if es_borrador %}
+        <div class="watermark">BORRADOR</div>
+    {% endif %}
+
     <div class="header">
         <div>
             {% if inmobiliaria.logo %}
@@ -23,9 +74,13 @@
         </div>
     </div>
 
-    <div class="contrato-cuerpo">
-        {{ cuerpo_renderizado|safe }}
+    <div class="contrato-titulo">
+        {{ titulo_contrato }}
     </div>
 
-    </body>
+    <div class="contrato-cuerpo">
+        {{ cuerpo_renderizado|linebreaksbr|safe }}
+    </div>
+
+</body>
 </html>

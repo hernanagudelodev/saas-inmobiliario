@@ -13,6 +13,11 @@ from django.contrib import messages
 from django.urls import reverse_lazy
 from django.template.loader import render_to_string
 
+from django.http import HttpResponse
+from weasyprint import HTML
+
+from django.views.decorators.clickjacking import xframe_options_sameorigin
+
 @login_required
 def home(request):
     """
@@ -87,34 +92,9 @@ class DetalleContratoMandato(LoginRequiredMixin, TenantRequiredMixin, DetailView
     context_object_name = 'contrato'
 
     def get_context_data(self, **kwargs):
+        # La vista ahora es mucho más simple, solo añade la sección para el menú
         context = super().get_context_data(**kwargs)
         context['section'] = 'arriendos'
-
-        contrato = self.get_object()
-
-        if contrato.estado == 'BORRADOR':
-            plantilla_obj = contrato.plantilla_usada
-            template_string = "{% load letras_numeros %}" +plantilla_obj.cuerpo_texto
-
-            contexto_render = {
-                "propietario": contrato.propietario,
-                "propiedad": contrato.propiedad,
-                "inmobiliaria": contrato.inmobiliaria,
-                "contrato": contrato
-            }
-
-            # Renderizamos primero las cláusulas del contrato
-            template = engines['django'].from_string("{% load letras_numeros %}" + template_string)
-            clausulas_renderizadas = template.render(contexto_render)
-
-            # Ahora, pasamos las cláusulas a la plantilla maestra para generar el HTML completo
-            contexto_final = {
-                'inmobiliaria': contrato.inmobiliaria,
-                'cuerpo_renderizado': clausulas_renderizadas
-            }
-            html_completo = render_to_string('gestion_arriendos/base_contrato_pdf.html', contexto_final)
-            context['texto_borrador_renderizado'] = html_completo
-
         return context
 
 @login_required
@@ -145,7 +125,8 @@ def finalizar_contrato_mandato(request, contrato_id):
     # Renderizamos la plantilla maestra para el guardado final
     contexto_final = {
         'inmobiliaria': contrato.inmobiliaria,
-        'cuerpo_renderizado': clausulas_renderizadas
+        'cuerpo_renderizado': clausulas_renderizadas,
+        'titulo_contrato': plantilla_obj.titulo
     }
     texto_renderizado = render_to_string('gestion_arriendos/base_contrato_pdf.html', contexto_final)
     
@@ -155,6 +136,53 @@ def finalizar_contrato_mandato(request, contrato_id):
 
     messages.success(request, "El contrato ha sido finalizado y está listo para ser firmado.")
     return redirect('gestion_arriendos:detalle_contrato_mandato', pk=contrato.id)
+
+@xframe_options_sameorigin # Este decorador permite que la vista se muestre en un iframe
+@login_required
+def descargar_borrador_contrato_mandato(request, contrato_id):
+    """
+    Genera y sirve un PDF del borrador del contrato con una marca de agua.
+    """
+    contrato = get_object_or_404(ContratoMandato, id=contrato_id, inmobiliaria=request.user.profile.inmobiliaria)
+
+    # Solo generamos el borrador si el contrato está en ese estado
+    if contrato.estado != 'BORRADOR':
+        messages.error(request, "Este contrato ya no es un borrador y no se puede descargar de esta forma.")
+        return redirect('gestion_arriendos:detalle_contrato_mandato', pk=contrato.id)
+
+    # Reutilizamos la misma lógica de renderizado que en la vista de detalle
+    plantilla_obj = contrato.plantilla_usada
+    template_string = "{% load letras_numeros %}" + plantilla_obj.cuerpo_texto
+    
+    contexto_render = {
+        "propietario": contrato.propietario,
+        "propiedad": contrato.propiedad,
+        "inmobiliaria": contrato.inmobiliaria,
+        "contrato": contrato
+    }
+    
+    template = engines['django'].from_string(template_string)
+    clausulas_renderizadas = template.render(contexto_render)
+
+    # Renderizamos la plantilla maestra, pasando la variable para la marca de agua
+    contexto_final = {
+        'inmobiliaria': contrato.inmobiliaria,
+        'cuerpo_renderizado': clausulas_renderizadas,
+        'titulo_contrato': plantilla_obj.titulo, 
+        'es_borrador': True  # <-- ¡La clave para la marca de agua!
+    }
+    html_string = render_to_string('gestion_arriendos/base_contrato_pdf.html', contexto_final)
+
+    # Creamos el PDF en memoria
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    pdf = html.write_pdf()
+
+    # Creamos la respuesta HTTP para servir el archivo
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Borrador_Contrato_{contrato.id}.pdf"'
+    
+    return response
+
 
 ''' Plantillas contratos '''
 
