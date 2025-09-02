@@ -1,5 +1,7 @@
 from django import forms
-from .models import ContratoMandato, PlantillaContrato
+
+from core_inmobiliario.models import Cliente, PropiedadCliente
+from .models import ContratoArrendamiento, ContratoMandato, PlantillaContrato
 
 class ContratoMandatoForm(forms.ModelForm):
     plantilla_usada = forms.ModelChoiceField(
@@ -48,3 +50,65 @@ class PlantillaContratoForm(forms.ModelForm):
         widgets = {
             'cuerpo_texto': forms.Textarea(attrs={'rows': 15}),
         }
+
+
+# --- FORMULARIO PARA EL CONTRATO DE ARRENDAMIENTO ---
+class ContratoArrendamientoForm(forms.ModelForm):
+    arrendatario = forms.ModelChoiceField(
+        queryset=Cliente.objects.none(), # Se llenará dinámicamente en __init__
+        label="Arrendatario",
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    plantilla_usada = forms.ModelChoiceField(
+        queryset=PlantillaContrato.objects.none(), # Se llenará dinámicamente en __init__
+        label="Plantilla del Contrato",
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    class Meta:
+        model = ContratoArrendamiento
+        fields = [
+            'arrendatario',
+            'plantilla_usada',
+            'periodicidad',
+            'uso_inmueble',
+            'renovacion_automatica',
+            'meses_preaviso',
+            'dias_plazo_pago',
+            'prorrateado',
+            'observaciones',
+            'clausulas_adicionales',
+        ]
+        # Aplicamos estilo a los campos de selección y checkboxes
+        widgets = {
+            'periodicidad': forms.Select(attrs={'class': 'form-select'}),
+            'uso_inmueble': forms.Select(attrs={'class': 'form-select'}),
+            'renovacion_automatica': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'prorrateado': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        # Capturamos los argumentos personalizados que pasamos desde la vista
+        inmobiliaria = kwargs.pop('inmobiliaria', None)
+        propiedad = kwargs.pop('propiedad', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # Filtramos las plantillas de contrato
+        if inmobiliaria:
+            self.fields['plantilla_usada'].queryset = PlantillaContrato.objects.filter(
+                inmobiliaria=inmobiliaria, 
+                tipo_contrato='ARRENDAMIENTO'
+            )
+        
+        # Filtramos los clientes para mostrar solo los vinculados como Arrendatarios
+        if propiedad:
+            arrendatarios_pks = PropiedadCliente.objects.filter(
+                propiedad=propiedad,
+                relacion='AR'  # 'AR' es el código para 'Arrendatario'
+            ).values_list('cliente_id', flat=True)
+            
+            self.fields['arrendatario'].queryset = Cliente.objects.filter(pk__in=arrendatarios_pks)

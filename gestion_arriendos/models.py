@@ -95,7 +95,7 @@ class BaseContrato(models.Model):
     """
     class EstadoContrato(models.TextChoices):
         BORRADOR = 'BORRADOR', 'Borrador' # El contrato se acaba de crear. Sus términos comerciales (comisión, fechas, etc.) se pueden editar.
-        FINALIZADO = 'FINALIZADO', 'Finalizado (Pendiente de Firma)' # Se ha generado el texto legal a partir de la plantilla. Ya no se puede editar. Está listo y pendiente de las firmas.
+        EN_FIRMAS = 'EN_FIRMAS', 'En Proceso de Firmas' # Se ha generado el texto legal a partir de la plantilla. Ya no se puede editar. Está listo y pendiente de las firmas.
         VIGENTE = 'VIGENTE', 'Vigente (Firmado y Activo)' # El contrato ya fue firmado y se encuentra dentro de su período de ejecución (entre la fecha de inicio y fin).
         TERMINADO = 'TERMINADO', 'Terminado' # El contrato cumplió su ciclo y finalizó de forma natural.
         CANCELADO = 'CANCELADO', 'Cancelado' # El contrato se terminó de forma anticipada.
@@ -127,6 +127,20 @@ class BaseContrato(models.Model):
     observaciones = models.TextField(blank=True)
     plantilla_usada = models.ForeignKey(PlantillaContrato, on_delete=models.SET_NULL, null=True, blank=True)
     clausulas_adicionales = models.TextField(blank=True)
+    # NUEVO CAMPO PARA GUARDAR EL PDF FINAL CUANDO SE ENVÍA A FIRMAS (se puede editar si se devuelve por parte de alguno de los actores)
+    archivo_pdf_final = models.FileField(
+        upload_to='contratos_finales/', 
+        blank=True, 
+        null=True,
+        help_text="El archivo PDF final que se genera al enviar a firmas."
+    )
+    # --- NUEVO CAMPO PARA EL DOCUMENTO FIRMADO ---
+    archivo_pdf_firmado = models.FileField(
+        upload_to='contratos_firmados/',
+        blank=True,
+        null=True,
+        help_text="El archivo PDF final con las firmas de todas las partes."
+    )
     # PERMITIMOS QUE EL TEXTO ESTÉ VACÍO INICIALMENTE
     texto_final_renderizado = models.TextField(
         editable=False, 

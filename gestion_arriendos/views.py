@@ -3,16 +3,14 @@ from django.contrib.auth.decorators import login_required
 from django.template import Context, Template, engines
 from django.views.generic import ListView, CreateView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
-
 from core_inmobiliario.models import Propiedad
 from inventarioapp.models import FormularioCaptacion
-from .models import ContratoMandato, PlantillaContrato
+from .models import ContratoMandato, PlantillaContrato, ContratoArrendamiento
 from usuarios.mixins import TenantRequiredMixin
-from .forms import ContratoMandatoForm, PlantillaContratoForm
+from .forms import ContratoMandatoForm, PlantillaContratoForm,ContratoArrendamientoForm
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.template.loader import render_to_string
-
 from django.http import HttpResponse
 from weasyprint import HTML
 
@@ -182,6 +180,38 @@ def descargar_borrador_contrato_mandato(request, contrato_id):
     response['Content-Disposition'] = f'inline; filename="Borrador_Contrato_{contrato.id}.pdf"'
     
     return response
+
+@login_required
+def crear_contrato_arrendamiento(request, mandato_id):
+    """
+    Crea un Contrato de Arrendamiento y lo asocia a un Contrato de Mandato existente.
+    """
+    mandato = get_object_or_404(ContratoMandato, id=mandato_id, inmobiliaria=request.user.profile.inmobiliaria)
+    propiedad = mandato.propiedad
+    inmobiliaria = request.user.profile.inmobiliaria
+
+    if request.method == 'POST':
+        form = ContratoArrendamientoForm(request.POST, inmobiliaria=inmobiliaria, propiedad=propiedad)
+        if form.is_valid():
+            arrendamiento = form.save(commit=False)
+            arrendamiento.contrato_mandato = mandato
+            arrendamiento.propiedad = propiedad
+            arrendamiento.inmobiliaria = inmobiliaria
+            arrendamiento.save()
+
+            messages.success(request, "Contrato de Arrendamiento creado exitosamente en estado Borrador.")
+            # Redirigimos de vuelta al panel de control de la propiedad
+            return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
+    else:
+        form = ContratoArrendamientoForm(inmobiliaria=inmobiliaria, propiedad=propiedad)
+
+    context = {
+        'form': form,
+        'mandato': mandato,
+        'propiedad': propiedad,
+        'section': 'arriendos'
+    }
+    return render(request, 'gestion_arriendos/crear_contrato_arrendamiento.html', context)
 
 
 ''' Plantillas contratos '''

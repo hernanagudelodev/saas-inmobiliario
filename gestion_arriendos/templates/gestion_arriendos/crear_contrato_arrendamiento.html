@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Nuevo Contrato de Arrendamiento{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px;">
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-primary text-white">
+      <h4 class="mb-0"><i class="bi bi-file-earmark-plus"></i> Nuevo Contrato de Arrendamiento</h4>
+      <p class="mb-0 small">Para la propiedad: {{ propiedad.direccion }}</p>
+    </div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        <div class="row">
+          {% for field in form %}
+            <div class="col-md-6 mb-3">
+              <label for="{{ field.id_for_label }}" class="form-label fw-bold">{{ field.label }}</label>
+
+              {% if field.field.widget.input_type == 'checkbox' %}
+                <div class="form-check mt-2">
+                  {{ field|add_class:"form-check-input" }}
+                </div>
+              {% else %}
+                {{ field|add_class:"form-select" }}
+              {% endif %}
+
+              {% if field.help_text %}
+                <div class="form-text">{{ field.help_text|safe }}</div>
+              {% endif %}
+              {% if field.errors %}
+                <div class="text-danger small">{{ field.errors }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-success mt-3">
+          Guardar Contrato de Arrendamiento
+        </button>
+        <a href="{% url 'core_inmobiliario:detalle_propiedad' propiedad.id %}" class="btn btn-link mt-3">Cancelar</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

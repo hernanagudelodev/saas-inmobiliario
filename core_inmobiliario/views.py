@@ -11,6 +11,7 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from usuarios.mixins import TenantRequiredMixin
 from inventarioapp.models import *
+from gestion_arriendos.models import ContratoMandato, ContratoArrendamiento
 
 
 
@@ -225,7 +226,47 @@ def eliminar_relacion_propiedad(request, relacion_id):
         messages.success(request, "Relación eliminada correctamente.")
     return redirect('core_inmobiliario:detalle_propiedad', id=propiedad_id)
 
+
 @login_required
+def detalle_propiedad(request, id):
+    # Obtenemos la propiedad, asegurándonos de que pertenece a la inmobiliaria del usuario
+    propiedad = get_object_or_404(Propiedad, id=id, inmobiliaria=request.user.profile.inmobiliaria)
+    
+    # --- LÓGICA DEL PANEL DE CONTROL ---
+    
+    # 1. Etapa de Captación: Buscamos la última captación firmada
+    captacion_firmada = FormularioCaptacion.objects.filter(
+        propiedad_cliente__propiedad=propiedad,
+        is_firmado=True
+    ).order_by('-fecha_firma').first()
+
+    # 2. Etapa de Contratación: Buscamos los contratos asociados a esta propiedad
+    contrato_mandato = ContratoMandato.objects.filter(propiedad=propiedad).first()
+    contrato_arrendamiento = ContratoArrendamiento.objects.filter(propiedad=propiedad).first() # Asumimos uno por ahora
+
+    # 3. Etapa de Entrega: Buscamos los inventarios de entrega
+    entrega_firmada = FormularioEntrega.objects.filter(
+        propiedad_cliente__propiedad=propiedad,
+        is_firmado=True
+    ).order_by('-fecha_firma').first()
+
+    # Obtenemos todas las relaciones cliente-propiedad para listarlas
+    relaciones_clientes = propiedad.propiedadcliente_set.all()
+
+    # Preparamos el contexto para enviarlo a la plantilla
+    context = {
+        'propiedad': propiedad,
+        'captacion_firmada': captacion_firmada,
+        'contrato_mandato': contrato_mandato,
+        'contrato_arrendamiento': contrato_arrendamiento,
+        'entrega_firmada': entrega_firmada,
+        'relaciones_clientes': relaciones_clientes, # <-- Pasamos la lista al contexto
+        'section': 'propiedades', # Para mantener el menú lateral activo
+    }
+    
+    return render(request, 'core_inmobiliario/propiedades/detalle_propiedad_completo.html', context)
+
+""" @login_required
 def detalle_propiedad(request, id):
     propiedad = get_object_or_404(Propiedad, id=id, inmobiliaria=request.user.profile.inmobiliaria)
     # Relacionados a la propiedad
@@ -246,5 +287,5 @@ def detalle_propiedad(request, id):
             'puede_entregar': puede_entregar,
             'section': 'propiedades',
         }
-    )
+    ) """
 

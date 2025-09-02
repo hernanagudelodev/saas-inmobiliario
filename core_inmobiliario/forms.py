@@ -1,4 +1,6 @@
 from django import forms
+
+from gestion_arriendos.models import ContratoArrendamiento, ContratoMandato, PlantillaContrato
 from .models import *
 
 
@@ -48,3 +50,5 @@ class AgregarPropiedadClienteForm(forms.ModelForm):
             self.fields['cliente'].queryset = Cliente.objects.filter(
                 inmobiliaria=propiedad.inmobiliaria
             )
+
+

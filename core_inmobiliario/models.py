@@ -36,7 +36,7 @@ class TipoPropiedad(models.Model):
 
 class Cliente(models.Model):
     nombre = models.CharField(max_length=200)
-    identificacion = models.CharField(max_length=200, unique=True, blank=True, null=True)
+    identificacion = models.CharField(max_length=200, blank=True, null=True)
     direccion_correspondiencia = models.CharField(max_length=200, blank=True, null=True)
     telefono = models.CharField(max_length=200, blank=True, null=True)
     email = models.EmailField(max_length=254, blank=True, null=True)
@@ -45,6 +45,10 @@ class Cliente(models.Model):
     class Meta:
         verbose_name = 'Cliente'
         verbose_name_plural = 'Clientes'
+        #REGLA DE UNICIDAD COMBINADA
+        constraints = [
+            models.UniqueConstraint(fields=['identificacion', 'inmobiliaria'], name='unique_identificacion_inmobiliaria')
+        ]
 
     def __str__(self):
         return self.nombre
