@@ -105,19 +105,16 @@
             <p>Contrato de Mandato en estado: <strong>{{ contrato_mandato.get_estado_display }}</strong>. Ahora debes crear el Contrato de Arrendamiento.</p>
             <a href="{% url 'gestion_arriendos:crear_contrato_arrendamiento' contrato_mandato.id %}" class="btn btn-sm btn-primary">Crear Contrato de Arrendamiento</a>
 
-          {% else %}
-            <p>Ambos contratos han sido creados. Revisa sus estados y procede con la siguiente acción.</p>
+          {% else %} <p>Ambos contratos han sido creados. Revisa sus estados y procede con la siguiente acción.</p>
             <ul class="list-unstyled">
               <li><strong>Contrato de Mandato:</strong> {{ contrato_mandato.get_estado_display }} <a href="{% url 'gestion_arriendos:detalle_contrato_mandato' contrato_mandato.id %}" class="ms-2">Ver Detalle</a></li>
-              <li><strong>Contrato de Arrendamiento:</strong> {{ contrato_arrendamiento.get_estado_display }} <a href="#" class="ms-2 disabled">Ver Detalle</a></li>
+              <li><strong>Contrato de Arrendamiento:</strong> {{ contrato_arrendamiento.get_estado_display }} <a href="{% url 'gestion_arriendos:detalle_contrato_arrendamiento' contrato_arrendamiento.id %}" class="ms-2">Ver Detalle</a></li>
             </ul>
             
             {% if contrato_mandato.estado == 'BORRADOR' %}
               <button class="btn btn-sm btn-success disabled">Enviar a Firmas (Próximamente)</button>
             {% elif contrato_mandato.estado == 'EN_FIRMAS' %}
-              <button class="btn btn-sm btn-info disabled">Confirmar Firmas (Próximamente)</button>
-              <button class="btn btn-sm btn-outline-secondary disabled">Revertir a Borrador (Próximamente)</button>
-            {% endif %}
+              {% endif %}
           {% endif %}
         </div>
       {% endif %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load letras_numeros %}
+
+{% block title %}Detalle del Contrato de Arrendamiento{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px;">
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">
+        <i class="bi bi-file-earmark-text"></i> Contrato de Arrendamiento: {{ contrato.propiedad.direccion }}
+      </h4>
+      <span class="badge bg-light text-dark fs-6">{{ contrato.get_estado_display }}</span>
+    </div>
+    <div class="card-body">
+      <h5 class="card-title">Arrendatario: {{ contrato.arrendatario.nombre }}</h5>
+      {% if contrato.codeudores.all %}
+        <h6 class="card-subtitle mb-2 text-muted">Codeudores: 
+          {% for codeudor in contrato.codeudores.all %}
+            {{ codeudor.nombre }}{% if not forloop.last %}, {% endif %}
+          {% endfor %}
+        </h6>
+      {% endif %}
+      <hr>
+
+      <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-card-list"></i> Resumen de Términos</h6>
+        </div>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item"><strong>Plantilla Utilizada:</strong> {{ contrato.plantilla_usada.nombre }}</li>
+            {% with primera_vigencia=contrato.vigencias.first %}
+              {% if primera_vigencia %}
+                <li class="list-group-item"><strong>Valor del Canon:</strong> ${{ primera_vigencia.valor_canon|floatformat:2 }}</li>
+                <li class="list-group-item"><strong>Período Inicial:</strong> Del {{ primera_vigencia.fecha_inicio }} al {{ primera_vigencia.fecha_fin }}</li>
+                <li class="list-group-item"><strong>Duración:</strong> {{ contrato|duracion_en_meses }} meses</li>
+              {% endif %}
+            {% endwith %}
+            <li class="list-group-item"><strong>Plazo para Pago:</strong> Primeros {{ contrato.dias_plazo_pago }} días del mes</li>
+        </ul>
+      </div>
+
+      {% if contrato.estado == 'BORRADOR' %}
+        <div class="alert alert-warning">
+          <h5 class="alert-heading"><i class="bi bi-eye"></i> Previsualización del Borrador en PDF</h5>
+          <p>Revisa el documento completo. Si los términos son correctos, puedes volver al panel de la propiedad para continuar el proceso.</p>
+        </div>
+        
+        <div class="pdf-container mb-4">
+            <iframe 
+                src="{% url 'gestion_arriendos:descargar_borrador_contrato_arrendamiento' contrato.id %}"
+                style="width: 100%; height: 75vh; border: 1px solid #dee2e6;"
+                title="Borrador de Contrato de Arrendamiento PDF">
+            </iframe>
+        </div>
+        
+        <div class="mt-4 text-center">
+            <a href="#" class="btn btn-secondary disabled">
+                <i class="bi bi-pencil-fill"></i> Editar Términos (Próximamente)
+            </a>
+            <a href="{% url 'core_inmobiliario:detalle_propiedad' contrato.propiedad.id %}" class="btn btn-outline-primary">Volver a la Propiedad</a>
+        </div>
+
+      {% else %}
+        <p>Funcionalidad para estados 'En Firmas' y 'Vigente' pendiente.</p>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}

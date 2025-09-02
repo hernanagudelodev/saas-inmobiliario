@@ -1,0 +1,9 @@
+{% for codeudor in codeudores %}
+EL CODEUDOR SOLIDARIO No. {{ forloop.counter }}:
+Nombre: {{ codeudor.nombre }}
+Identificación: {{ codeudor.identificacion }}
+Dirección: {{ codeudor.direccion_correspondiencia }}
+Teléfono: {{ codeudor.telefono }}
+Email: {{ codeudor.email }}
+
+{% endfor %}

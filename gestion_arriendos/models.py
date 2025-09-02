@@ -181,10 +181,17 @@ class ContratoArrendamiento(BaseContrato):
     - Se vincula directamente al Contrato de Mandato, creando una relación clara entre las tres partes.
     - Es la base para la facturación y gestión de cartera del inquilino.
     """
-    arrendatario = models.ForeignKey(Cliente, on_delete=models.PROTECT)
+    arrendatario = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='contratos_arrendatario')
     contrato_mandato = models.ForeignKey(ContratoMandato, on_delete=models.CASCADE, related_name="contratos_arrendamiento")
     dias_plazo_pago = models.PositiveIntegerField(default=5)
     prorrateado = models.BooleanField(default=False, help_text="Indica si el primer pago corresponde a una fracción del mes.")
+
+    # CAMPO PARA LOS CODEUDORES
+    codeudores = models.ManyToManyField(
+        Cliente, 
+        related_name='contratos_codeudor', 
+        blank=True
+    )
 
     def __str__(self):
         return f"Arrendamiento de {self.propiedad.direccion} a {self.arrendatario.nombre}"

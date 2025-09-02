@@ -1,0 +1,27 @@
+{% for codeudor in codeudores %}
+<div style="margin-top: 30px; page-break-inside: avoid;">
+    <table style="width: 100%; border: none; border-collapse: collapse;">
+        <tbody>
+            <tr>
+                <td style="width: 50%; vertical-align: top;">
+                    <strong>DEUDOR SOLIDARIO</strong>
+                    <br><br><br><br>
+                    <div style="border-top: 1px solid #000; padding-top: 5px;">
+                        <strong>{{ codeudor.nombre }}</strong>
+                    </div>
+                </td>
+                <td style="width: 50%; vertical-align: top; padding-left: 15px;">
+                    <strong>&nbsp;</strong> {# Espacio para alinear verticalmente #}
+                    <br><br><br><br>
+                    <div style="border-top: 1px solid #000; padding-top: 5px;">
+                        <strong>Cédula:</strong> {{ codeudor.identificacion }} <br>
+                        <strong>Celular:</strong> {{ codeudor.telefono }} <br>
+                        <strong>Correo:</strong> {{ codeudor.email }} <br>
+                        <strong>Dirección:</strong> {{ codeudor.direccion_correspondiencia }}
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endfor %}

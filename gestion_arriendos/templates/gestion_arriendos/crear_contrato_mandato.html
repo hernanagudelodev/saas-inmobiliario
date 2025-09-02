@@ -2,14 +2,16 @@
 {% load widget_tweaks %}
 
 {% block title %}
-  Nuevo Contrato de Mandato
+  {% if modo_edicion %}Editar{% else %}Nuevo{% endif %} Contrato de Mandato
 {% endblock %}
 
 {% block content %}
 <div class="container" style="max-width: 800px;">
   <div class="card shadow-sm mt-4">
     <div class="card-header bg-primary text-white">
-      <h4 class="mb-0"><i class="bi bi-file-earmark-plus"></i> Nuevo Contrato de Mandato</h4>
+      <h4 class="mb-0"><i class="bi bi-file-earmark-plus"></i> 
+        {% if modo_edicion %}Editar{% else %}Nuevo{% endif %} Contrato de Mandato
+      </h4>
     </div>
     <div class="card-body">
       <form method="post" novalidate>
@@ -43,7 +45,7 @@
         </div>
 
         <button type="submit" class="btn btn-success mt-3">
-          Guardar y Continuar
+          {% if modo_edicion %}Guardar Cambios{% else %}Guardar Contrato{% endif %}
         </button>
         <a href="{% url 'gestion_arriendos:lista_contratos' %}" class="btn btn-link mt-3">Cancelar</a>
       </form>

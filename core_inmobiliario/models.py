@@ -80,10 +80,12 @@ class PropiedadCliente(models.Model):
     PROPIETARIO = 'PR'
     APODERADO = 'AP'
     ARRENDATARIO = 'AR'
+    CODEUDOR = 'CO'
     TipoRelacion = [
         (PROPIETARIO, 'Propietario'),
         (APODERADO, 'Apoderado'),
         (ARRENDATARIO, 'Arrendatario'),
+        (CODEUDOR, 'Codeudor'),
     ]
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     propiedad = models.ForeignKey(Propiedad, on_delete=models.CASCADE)

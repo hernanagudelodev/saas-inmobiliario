@@ -1,20 +1,27 @@
 from django import forms
 
-from core_inmobiliario.models import Cliente, PropiedadCliente
+from core_inmobiliario.models import Cliente, CuentaBancaria, PropiedadCliente
 from .models import ContratoArrendamiento, ContratoMandato, PlantillaContrato
 
 class ContratoMandatoForm(forms.ModelForm):
     plantilla_usada = forms.ModelChoiceField(
-        queryset=PlantillaContrato.objects.none(), # El queryset se llenará en la vista
+        queryset=PlantillaContrato.objects.none(),
         label="Plantilla del Contrato",
-        required=True
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    cuenta_bancaria_pago = forms.ModelChoiceField(
+        queryset=CuentaBancaria.objects.none(),
+        label="Cuenta bancaria para pagos",
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-select'})
     )
 
     class Meta:
         model = ContratoMandato
-        # Seleccionamos los campos que el usuario llenará en este paso
         fields = [
             'plantilla_usada', 
+            'cuenta_bancaria_pago',
             'periodicidad',
             'uso_inmueble',
             'renovacion_automatica',
@@ -24,24 +31,29 @@ class ContratoMandatoForm(forms.ModelForm):
             'porcentaje_comision',
             'dia_corte_liquidaciones',
             'inmobiliaria_paga_administracion',
-            'cuenta_bancaria_pago',
             'observaciones',
             'clausulas_adicionales',
         ]
 
     def __init__(self, *args, **kwargs):
-        # Sacamos la inmobiliaria que pasaremos desde la vista
+        # Capturamos y removemos nuestros argumentos personalizados ANTES de continuar
         inmobiliaria = kwargs.pop('inmobiliaria', None)
+        propietario = kwargs.pop('propietario', None) # <-- ¡LA LÍNEA QUE FALTABA!
+        
+        # Llamamos al constructor padre, pero ya sin los argumentos personalizados
         super().__init__(*args, **kwargs)
         
+        # Ahora usamos los argumentos capturados para filtrar los campos
         if inmobiliaria:
-            # Filtramos el queryset para mostrar solo las plantillas de mandato de esa inmobiliaria
             self.fields['plantilla_usada'].queryset = PlantillaContrato.objects.filter(
                 inmobiliaria=inmobiliaria, 
                 tipo_contrato='MANDATO'
             )
-    # En el futuro, podríamos añadir widgets para mejorar la experiencia,
-    # como un selector de fechas.
+        if propietario:
+             self.fields['cuenta_bancaria_pago'].queryset = propietario.cuentas_bancarias.all()
+
+
+# --- FORMULARIO PARA LA PLANTILLA DEL CONTRATO ---
 
 class PlantillaContratoForm(forms.ModelForm):
     class Meta:
@@ -55,14 +67,23 @@ class PlantillaContratoForm(forms.ModelForm):
 # --- FORMULARIO PARA EL CONTRATO DE ARRENDAMIENTO ---
 class ContratoArrendamientoForm(forms.ModelForm):
     arrendatario = forms.ModelChoiceField(
-        queryset=Cliente.objects.none(), # Se llenará dinámicamente en __init__
-        label="Arrendatario",
+        queryset=Cliente.objects.none(),
+        label="Arrendatario Principal",
         required=True,
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+
+    # --- NUEVO CAMPO PARA SELECCIONAR CODEUDORES ---
+    codeudores = forms.ModelMultipleChoiceField(
+        queryset=Cliente.objects.none(),
+        label="Codeudores (selecciona uno o varios)",
+        required=False, # Hacemos que no sea obligatorio tener codeudores
+        widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': '4'})
+    )
+    # -----------------------------------------------
     
     plantilla_usada = forms.ModelChoiceField(
-        queryset=PlantillaContrato.objects.none(), # Se llenará dinámicamente en __init__
+        queryset=PlantillaContrato.objects.none(),
         label="Plantilla del Contrato",
         required=True,
         widget=forms.Select(attrs={'class': 'form-select'})
@@ -70,8 +91,10 @@ class ContratoArrendamientoForm(forms.ModelForm):
 
     class Meta:
         model = ContratoArrendamiento
+        # Añadimos 'codeudores' a la lista de campos
         fields = [
             'arrendatario',
+            'codeudores',
             'plantilla_usada',
             'periodicidad',
             'uso_inmueble',
@@ -82,7 +105,6 @@ class ContratoArrendamientoForm(forms.ModelForm):
             'observaciones',
             'clausulas_adicionales',
         ]
-        # Aplicamos estilo a los campos de selección y checkboxes
         widgets = {
             'periodicidad': forms.Select(attrs={'class': 'form-select'}),
             'uso_inmueble': forms.Select(attrs={'class': 'form-select'}),
@@ -91,24 +113,27 @@ class ContratoArrendamientoForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        # Capturamos los argumentos personalizados que pasamos desde la vista
         inmobiliaria = kwargs.pop('inmobiliaria', None)
         propiedad = kwargs.pop('propiedad', None)
         
         super().__init__(*args, **kwargs)
         
-        # Filtramos las plantillas de contrato
         if inmobiliaria:
             self.fields['plantilla_usada'].queryset = PlantillaContrato.objects.filter(
                 inmobiliaria=inmobiliaria, 
                 tipo_contrato='ARRENDAMIENTO'
             )
         
-        # Filtramos los clientes para mostrar solo los vinculados como Arrendatarios
         if propiedad:
+            # Filtramos los clientes vinculados como 'Arrendatario'
             arrendatarios_pks = PropiedadCliente.objects.filter(
-                propiedad=propiedad,
-                relacion='AR'  # 'AR' es el código para 'Arrendatario'
+                propiedad=propiedad, relacion='AR'
             ).values_list('cliente_id', flat=True)
-            
             self.fields['arrendatario'].queryset = Cliente.objects.filter(pk__in=arrendatarios_pks)
+
+            # --- NUEVA LÓGICA PARA FILTRAR CODEUDORES ---
+            codeudores_pks = PropiedadCliente.objects.filter(
+                propiedad=propiedad, relacion='CO' # 'CO' es el código para 'Codeudor'
+            ).values_list('cliente_id', flat=True)
+            self.fields['codeudores'].queryset = Cliente.objects.filter(pk__in=codeudores_pks)
+            # ---------------------------------------------

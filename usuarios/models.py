@@ -16,11 +16,12 @@ class Inmobiliaria(models.Model):
     nombre_firma_autorizada = models.CharField(max_length=150, blank=True, help_text="Nombre del representante autorizado que firma")
     cedula_firma_autorizada = models.CharField(max_length=30, blank=True, help_text="Cédula o documento de identidad")
     ciudad_domicilio = models.CharField(max_length=100, blank=True, help_text="Ciudad de domicilio de la inmobiliaria")
-    camara_registro = models.CharField(max_length=20, blank=True, help_text="Cámara de Comercio donde se registró la inmobiliaria")
+    camara_registro = models.CharField(max_length=100, blank=True, help_text="Cámara de Comercio donde se registró la inmobiliaria")
     numero_registro = models.CharField(max_length=20, blank=True, help_text="Número de registro de la inmobiliaria en Cámara de Comercio")
     fecha_registro = models.DateField(blank=True, help_text="Fecha de registro de la inmobiliaria en Cámara de Comercio")
-    matricula_arrendador = models.CharField(max_length=100, blank=True, help_text="Número de resolución de matrícula del arrendador y fecha de expedición")
+    matricula_arrendador = models.TextField(blank=True, help_text="Número de resolución de matrícula del arrendador y fecha de expedición")
     pagina_web = models.URLField(blank=True, help_text="Página web de la inmobiliaria")
+    forma_recaudo = models.TextField(blank=True, help_text="Forma de recaudo de la inmobiliaria")
 
 
     def __str__(self):

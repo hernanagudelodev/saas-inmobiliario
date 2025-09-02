@@ -14,11 +14,24 @@
     <div class="card-body">
       <h5 class="card-title">Propietario: {{ contrato.propietario.nombre }}</h5>
       <hr>
-      
+
+      <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-card-list"></i> Resumen de Términos</h6>
+        </div>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item"><strong>Plantilla Utilizada:</strong> {{ contrato.plantilla_usada.nombre }}</li>
+            <li class="list-group-item"><strong>Comisión:</strong> {{ contrato.porcentaje_comision }}%</li>
+            <li class="list-group-item"><strong>Día de Corte para Liquidaciones:</strong> Día {{ contrato.dia_corte_liquidaciones }} de cada mes</li>
+            <li class="list-group-item"><strong>Cuenta para Pagos:</strong> {{ contrato.cuenta_bancaria_pago.nombre_banco }} - {{ contrato.cuenta_bancaria_pago.tipo_cuenta }} (****{{ contrato.cuenta_bancaria_pago.numero_cuenta|slice:"-4:" }})</li>
+            <li class="list-group-item"><strong>Renovación Automática:</strong> {% if contrato.renovacion_automatica %}Sí{% else %}No{% endif %}</li>
+        </ul>
+      </div>
+
       {% if contrato.estado == 'BORRADOR' %}
         <div class="alert alert-warning">
           <h5 class="alert-heading"><i class="bi bi-eye"></i> Previsualización del Borrador en PDF</h5>
-          <p>Este es el borrador final del contrato. Revisa el documento y, si todo es correcto, finalízalo para proceder con la firma.</p>
+          <p>Revisa el documento completo a continuación. Si los términos y el texto son correctos, puedes finalizar el contrato.</p>
         </div>
         
         <div class="pdf-container mb-4">
@@ -30,10 +43,10 @@
         </div>
         
         <div class="mt-4 text-center">
-            <a href="#" class="btn btn-secondary disabled">Editar Términos (Próximamente)</a>
-            <a href="{% url 'gestion_arriendos:finalizar_contrato_mandato' contrato.id %}" class="btn btn-success">
-                <i class="bi bi-check-circle"></i> Finalizar Contrato y Preparar para Firma
+            <a href="{% url 'gestion_arriendos:editar_contrato_mandato' contrato.id %}" class="btn btn-secondary">
+                <i class="bi bi-pencil-fill"></i> Editar Términos
             </a>
+            <a href="{% url 'core_inmobiliario:detalle_propiedad' contrato.propiedad.id %}" class="btn btn-outline-primary">Volver a la Propiedad</a>
         </div>
 
       {% else %}
@@ -43,7 +56,15 @@
         </div>
 
         <div class="pdf-container mb-4">
-            <p class="text-center text-muted">Aquí se mostrará el PDF final una vez implementada la firma.</p>
+            {% if contrato.archivo_pdf_final %}
+                <iframe 
+                    src="{{ contrato.archivo_pdf_final.url }}"
+                    style="width: 100%; height: 75vh; border: 1px solid #dee2e6;"
+                    title="Contrato Final PDF">
+                </iframe>
+            {% else %}
+                <p class="text-center text-muted">No se ha generado un archivo PDF para este contrato.</p>
+            {% endif %}
         </div>
   
         <div class="mt-4">

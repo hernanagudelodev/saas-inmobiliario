@@ -182,27 +182,74 @@ def descargar_borrador_contrato_mandato(request, contrato_id):
     return response
 
 @login_required
+def editar_contrato_mandato(request, pk):
+    """
+    Permite editar un Contrato de Mandato que está en estado Borrador.
+    """
+    mandato = get_object_or_404(ContratoMandato, pk=pk, inmobiliaria=request.user.profile.inmobiliaria)
+
+    # Validación: Solo se puede editar si está en estado Borrador
+    if mandato.estado != 'BORRADOR':
+        messages.error(request, "Este contrato no se puede editar porque ya no está en estado 'Borrador'.")
+        return redirect('gestion_arriendos:detalle_contrato_mandato', pk=mandato.pk)
+
+    if request.method == 'POST':
+        form = ContratoMandatoForm(request.POST, instance=mandato, inmobiliaria=mandato.inmobiliaria, propietario=mandato.propietario)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "El Contrato de Mandato ha sido actualizado exitosamente.")
+            return redirect('gestion_arriendos:detalle_contrato_mandato', pk=mandato.pk)
+    else:
+        form = ContratoMandatoForm(instance=mandato, inmobiliaria=mandato.inmobiliaria, propietario=mandato.propietario)
+
+    context = {
+        'form': form,
+        'propiedad': mandato.propiedad,
+        'propietario': mandato.propietario,
+        'modo_edicion': True, # Para cambiar el título y el botón en la plantilla
+        'section': 'arriendos'
+    }
+    # Reutilizamos la plantilla de creación
+    return render(request, 'gestion_arriendos/crear_contrato_mandato.html', context)
+
+'''----------------------------------------------------
+    Vistas para Contrato de Arrendamiento
+------------------------------------------------------'''
+
+
+@login_required
 def crear_contrato_arrendamiento(request, mandato_id):
     """
     Crea un Contrato de Arrendamiento y lo asocia a un Contrato de Mandato existente.
     """
+    # Obtenemos el contexto necesario: el mandato, la propiedad y la inmobiliaria
     mandato = get_object_or_404(ContratoMandato, id=mandato_id, inmobiliaria=request.user.profile.inmobiliaria)
     propiedad = mandato.propiedad
     inmobiliaria = request.user.profile.inmobiliaria
 
     if request.method == 'POST':
+        # Al instanciar el formulario, le pasamos los datos del POST y el contexto
         form = ContratoArrendamientoForm(request.POST, inmobiliaria=inmobiliaria, propiedad=propiedad)
         if form.is_valid():
+            # Creamos el objeto en memoria sin guardarlo aún en la BD
             arrendamiento = form.save(commit=False)
+            
+            # Asignamos las relaciones que no vienen del formulario
             arrendamiento.contrato_mandato = mandato
             arrendamiento.propiedad = propiedad
             arrendamiento.inmobiliaria = inmobiliaria
+            
+            # Guardamos el objeto principal en la base de datos
             arrendamiento.save()
-
+            
+            # MUY IMPORTANTE: Guardamos las relaciones "Muchos a Muchos" (codeudores)
+            form.save_m2m()
+            
             messages.success(request, "Contrato de Arrendamiento creado exitosamente en estado Borrador.")
             # Redirigimos de vuelta al panel de control de la propiedad
             return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
     else:
+        # Si es una petición GET, creamos un formulario vacío, pasándole el contexto
         form = ContratoArrendamientoForm(inmobiliaria=inmobiliaria, propiedad=propiedad)
 
     context = {
@@ -213,6 +260,56 @@ def crear_contrato_arrendamiento(request, mandato_id):
     }
     return render(request, 'gestion_arriendos/crear_contrato_arrendamiento.html', context)
 
+# --- NUEVA VISTA DE DETALLE PARA CONTRATO DE ARRENDAMIENTO ---
+class DetalleContratoArrendamiento(LoginRequiredMixin, TenantRequiredMixin, DetailView):
+    model = ContratoArrendamiento
+    template_name = 'gestion_arriendos/detalle_contrato_arrendamiento.html'
+    context_object_name = 'contrato'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['section'] = 'arriendos'
+        return context
+
+# --- NUEVA VISTA DE DESCARGA PARA BORRADOR DE ARRENDAMIENTO ---
+@xframe_options_sameorigin
+@login_required
+def descargar_borrador_contrato_arrendamiento(request, contrato_id):
+    contrato = get_object_or_404(ContratoArrendamiento, id=contrato_id, inmobiliaria=request.user.profile.inmobiliaria)
+
+    if contrato.estado != 'BORRADOR':
+        messages.error(request, "Este contrato ya no es un borrador.")
+        return redirect('gestion_arriendos:detalle_contrato_arrendamiento', pk=contrato.id)
+
+    plantilla_obj = contrato.plantilla_usada
+    template_string = "{% load letras_numeros %}" + plantilla_obj.cuerpo_texto
+    
+    contexto_render = {
+        "propietario": contrato.contrato_mandato.propietario,
+        "arrendatario": contrato.arrendatario,
+        "propiedad": contrato.propiedad,
+        "inmobiliaria": contrato.inmobiliaria,
+        "contrato": contrato
+    }
+    
+    template = engines['django'].from_string(template_string)
+    clausulas_renderizadas = template.render(contexto_render)
+
+    contexto_final = {
+        'inmobiliaria': contrato.inmobiliaria,
+        'cuerpo_renderizado': clausulas_renderizadas,
+        'titulo_contrato': plantilla_obj.titulo,
+        'es_borrador': True
+    }
+    html_string = render_to_string('gestion_arriendos/base_contrato_pdf.html', contexto_final)
+
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    pdf = html.write_pdf()
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Borrador_Contrato_Arrendamiento_{contrato.id}.pdf"'
+    
+    return response
 
 ''' Plantillas contratos '''
 
@@ -272,14 +369,24 @@ class CrearPlantilla(LoginRequiredMixin, TenantRequiredMixin, CreateView):
                 {'variable': '{{ contrato.cuenta_bancaria_pago.tipo_cuenta_display }}', 'descripcion': 'Tipo de cuenta bancaria del propietario.'},
                 {'variable': '{{ contrato.cuenta_bancaria_pago.numero_cuenta }}', 'descripcion': 'Número de cuenta bancaria del propietario.'},
                 {'variable': '{{ contrato.cuenta_bancaria_pago.nombre_banco }}', 'descripcion': 'Nombre del banco de la cuenta bancaria del propietario.'},
+                {'variable': '{{ contrato|duracion_en_meses }}', 'descripcion': 'Calcula y muestra la duración del contrato en meses.'},
             ],
             'Propietario': [
                 {'variable': '{{ propietario.nombre }}', 'descripcion': 'Nombre completo del propietario.'},
                 {'variable': '{{ propietario.identificacion }}', 'descripcion': 'Documento de identidad del propietario.'},
+                {'variable': '{{ propietario.telefono }}', 'descripcion': 'Teléfono del propietario.'},
+                {'variable': '{{ propietario.email }}', 'descripcion': 'Email del propietario.'},
             ],
             'Arrendatario': [
                 {'variable': '{{ arrendatario.nombre }}', 'descripcion': 'Nombre completo del arrendatario.'},
                 {'variable': '{{ arrendatario.identificacion }}', 'descripcion': 'Documento de identidad del arrendatario.'},
+                {'variable': '{{ arrendatario.telefono }}', 'descripcion': 'Teléfono del arrendatario.'},
+                {'variable': '{{ arrendatario.email }}', 'descripcion': 'Email del arrendatario.'},
+            ],
+            'Codeudor': [
+                # La descripción ahora muestra la etiqueta simplificada
+                {'variable': '{% lista_codeudores contrato %}', 'descripcion': 'Inserta la lista completa y formateada de todos los codeudores.'},
+                {'variable': '{% firmas_codeudores contrato %}', 'descripcion': 'Inserta los bloques de firma para todos los codeudores.'}
             ],
             'Inmueble': [
                 {'variable': '{{ propiedad.direccion }}', 'descripcion': 'Dirección completa del inmueble.'},
@@ -302,6 +409,7 @@ class CrearPlantilla(LoginRequiredMixin, TenantRequiredMixin, CreateView):
                 {'variable': '{{ inmobiliaria.fecha_registro }}', 'descripcion': 'Fecha de registro de la inmobiliaria.'},
                 {'variable': '{{ inmobiliaria.matricula_arrendador }}', 'descripcion': 'Matrícula de arrendador de la inmobiliaria.'},
                 {'variable': '{{ inmobiliaria.pagina_web }}', 'descripcion': 'Página web de la inmobiliaria.'},
+                {'variable': '{{ inmobiliaria.forma_recaudo }}', 'descripcion': 'Forma de recaudo de la inmobiliaria.'},
             ]
         }
         # ----------------------
