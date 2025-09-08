@@ -1,13 +1,17 @@
 {% extends "base.html" %}
 {% load widget_tweaks %}
 
-{% block title %}Nuevo Contrato de Arrendamiento{% endblock %}
+{% block title %}
+  {% if modo_edicion %}Editar{% else %}Nuevo{% endif %} Contrato de Arrendamiento
+{% endblock %}
 
 {% block content %}
 <div class="container" style="max-width: 800px;">
   <div class="card shadow-sm mt-4">
     <div class="card-header bg-primary text-white">
-      <h4 class="mb-0"><i class="bi bi-file-earmark-plus"></i> Nuevo Contrato de Arrendamiento</h4>
+      <h4 class="mb-0"><i class="bi bi-file-earmark-plus"></i>
+        {% if modo_edicion %}Editar{% else %}Nuevo{% endif %} Contrato de Arrendamiento
+      </h4>
       <p class="mb-0 small">Para la propiedad: {{ propiedad.direccion }}</p>
     </div>
     <div class="card-body">
@@ -38,7 +42,7 @@
         </div>
 
         <button type="submit" class="btn btn-success mt-3">
-          Guardar Contrato de Arrendamiento
+          {% if modo_edicion %}Guardar Cambios{% else %}Guardar Contrato de Arrendamiento{% endif %}
         </button>
         <a href="{% url 'core_inmobiliario:detalle_propiedad' propiedad.id %}" class="btn btn-link mt-3">Cancelar</a>
       </form>

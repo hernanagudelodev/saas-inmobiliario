@@ -112,6 +112,11 @@
             </ul>
             
             {% if contrato_mandato.estado == 'BORRADOR' %}
+              <div class="mt-3">
+                <a href="{% url 'gestion_arriendos:eliminar_proceso_borrador' propiedad.id %}" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash"></i> Eliminar Proceso en Borrador
+                </a>
+              </div>
               <button class="btn btn-sm btn-success disabled">Enviar a Firmas (Próximamente)</button>
             {% elif contrato_mandato.estado == 'EN_FIRMAS' %}
               {% endif %}

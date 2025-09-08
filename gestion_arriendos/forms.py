@@ -89,6 +89,24 @@ class ContratoArrendamientoForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
+    # --- CAMPOS ADICIONALES PARA EL CONTRATO DE ARRENDAMIENTO, VIENEN DEL MODELO VIGENCIA. 
+    # --- PERMITEN CREAR LA PRIMERA VIGENCIA DEL CONTRATO DE ARRENDAMIENTO EN UN SOLO FORM ---
+
+    valor_canon = forms.DecimalField(
+        label="Valor del Canon de Arrendamiento",
+        max_digits=12,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+    fecha_inicio = forms.DateField(
+        label="Fecha de Inicio del Contrato",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+    fecha_fin = forms.DateField(
+        label="Fecha de Finalización del Contrato",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+
     class Meta:
         model = ContratoArrendamiento
         # Añadimos 'codeudores' a la lista de campos
@@ -131,7 +149,7 @@ class ContratoArrendamientoForm(forms.ModelForm):
             ).values_list('cliente_id', flat=True)
             self.fields['arrendatario'].queryset = Cliente.objects.filter(pk__in=arrendatarios_pks)
 
-            # --- NUEVA LÓGICA PARA FILTRAR CODEUDORES ---
+            # --- LÓGICA PARA FILTRAR CODEUDORES ---
             codeudores_pks = PropiedadCliente.objects.filter(
                 propiedad=propiedad, relacion='CO' # 'CO' es el código para 'Codeudor'
             ).values_list('cliente_id', flat=True)

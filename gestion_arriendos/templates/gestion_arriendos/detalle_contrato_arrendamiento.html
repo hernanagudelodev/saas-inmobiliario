@@ -55,9 +55,12 @@
         </div>
         
         <div class="mt-4 text-center">
-            <a href="#" class="btn btn-secondary disabled">
-                <i class="bi bi-pencil-fill"></i> Editar Términos (Próximamente)
-            </a>
+          <a href="{% url 'gestion_arriendos:editar_contrato_arrendamiento' contrato.id %}" class="btn btn-secondary">
+              <i class="bi bi-pencil-fill"></i> Editar Términos
+          </a>
+           <a href="{% url 'gestion_arriendos:eliminar_contrato_mandato' contrato.id %}" class="btn btn-outline-danger">
+              <i class="bi bi-trash"></i> Eliminar Borrador
+          </a>
             <a href="{% url 'core_inmobiliario:detalle_propiedad' contrato.propiedad.id %}" class="btn btn-outline-primary">Volver a la Propiedad</a>
         </div>
 

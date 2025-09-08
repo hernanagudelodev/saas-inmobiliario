@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmar Eliminación de Proceso{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 600px;">
+  <div class="card shadow-sm mt-5 border-danger">
+    <div class="card-header bg-danger text-white">
+      <h4 class="mb-0"><i class="bi bi-trash"></i> Confirmar Eliminación de Proceso</h4>
+    </div>
+    <div class="card-body">
+      <p class="fs-5">¿Estás seguro de que deseas eliminar permanentemente el proceso de arrendamiento en borrador para la propiedad <strong>{{ propiedad.direccion }}</strong>?</p>
+      <p>Se eliminarán los siguientes documentos:</p>
+      <ul class="list-group mb-4">
+        {% if mandato %}
+          <li class="list-group-item">Borrador del Contrato de Mandato</li>
+        {% endif %}
+        {% if arrendamiento %}
+          <li class="list-group-item">Borrador del Contrato de Arrendamiento</li>
+        {% endif %}
+      </ul>
+      <p><strong>Esta acción no se puede deshacer.</strong></p>
+
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Sí, Eliminar Proceso</button>
+        <a href="{% url 'core_inmobiliario:detalle_propiedad' propiedad.id %}" class="btn btn-secondary">Cancelar</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
