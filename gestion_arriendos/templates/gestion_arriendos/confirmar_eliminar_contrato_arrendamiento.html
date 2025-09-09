@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmar Eliminación{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 600px;">
+  <div class="card shadow-sm mt-5 border-danger">
+    <div class="card-header bg-danger text-white">
+      <h4 class="mb-0"><i class="bi bi-trash"></i> Confirmar Eliminación</h4>
+    </div>
+    <div class="card-body">
+      <p class="fs-5">¿Estás seguro de que deseas eliminar permanentemente el borrador del siguiente contrato?</p>
+      <ul class="list-group mb-4">
+        <li class="list-group-item"><strong>Tipo:</strong> Contrato de Arrendamiento</li>
+        <li class="list-group-item"><strong>Propiedad:</strong> {{ contrato.propiedad.direccion }}</li>
+        <li class="list-group-item"><strong>Arrendatario:</strong> {{ contrato.arrendatario.nombre }}</li>
+      </ul>
+      <p><strong>Esta acción no se puede deshacer.</strong></p>
+
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Sí, Eliminar Borrador</button>
+        <a href="{% url 'gestion_arriendos:detalle_contrato_arrendamiento' contrato.id %}" class="btn btn-secondary">Cancelar</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

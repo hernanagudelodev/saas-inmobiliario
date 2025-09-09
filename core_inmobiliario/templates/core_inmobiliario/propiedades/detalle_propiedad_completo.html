@@ -102,9 +102,18 @@
             <a href="{% url 'gestion_arriendos:crear_contrato_mandato' propiedad.id %}" class="btn btn-sm btn-primary">Crear Contrato de Mandato</a>
           
           {% elif contrato_mandato and not contrato_arrendamiento %}
-            <p>Contrato de Mandato en estado: <strong>{{ contrato_mandato.get_estado_display }}</strong>. Ahora debes crear el Contrato de Arrendamiento.</p>
-            <a href="{% url 'gestion_arriendos:crear_contrato_arrendamiento' contrato_mandato.id %}" class="btn btn-sm btn-primary">Crear Contrato de Arrendamiento</a>
-
+            <p class="mb-2">Ya existe un borrador del Contrato de Mandato. Puedes revisarlo o proceder a crear el Contrato de Arrendamiento.</p>
+            <ul class="list-unstyled mb-2">
+              <li>
+                <strong>Contrato de Mandato:</strong> {{ contrato_mandato.get_estado_display }}
+                <a href="{% url 'gestion_arriendos:detalle_contrato_mandato' contrato_mandato.id %}" class="ms-2">
+                  <i class="bi bi-eye"></i> Ver Detalle
+                </a>
+              </li>
+            </ul>
+            <a href="{% url 'gestion_arriendos:crear_contrato_arrendamiento' contrato_mandato.id %}" class="btn btn-sm btn-primary">
+              Crear Contrato de Arrendamiento
+            </a>
           {% else %} <p>Ambos contratos han sido creados. Revisa sus estados y procede con la siguiente acción.</p>
             <ul class="list-unstyled">
               <li><strong>Contrato de Mandato:</strong> {{ contrato_mandato.get_estado_display }} <a href="{% url 'gestion_arriendos:detalle_contrato_mandato' contrato_mandato.id %}" class="ms-2">Ver Detalle</a></li>

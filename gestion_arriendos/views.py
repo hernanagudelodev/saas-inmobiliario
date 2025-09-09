@@ -39,6 +39,8 @@ class ListaContratos(LoginRequiredMixin, TenantRequiredMixin, ListView):
         context['section'] = 'arriendos' # Para mantener el menú activo
         return context
     
+#--- Vistas para Contrato de Mandato ---
+
 @login_required
 def crear_contrato_mandato(request, propiedad_id):
     inmobiliaria = request.user.profile.inmobiliaria
@@ -57,23 +59,20 @@ def crear_contrato_mandato(request, propiedad_id):
     propietario = ultima_captacion.propiedad_cliente.cliente
 
     if request.method == 'POST':
-        # Pasamos la inmobiliaria al formulario
-        form = ContratoMandatoForm(request.POST, inmobiliaria=inmobiliaria)
+        # CORRECCIÓN: Ahora pasamos 'propietario' también en el POST
+        form = ContratoMandatoForm(request.POST, inmobiliaria=inmobiliaria, propietario=propietario)
         if form.is_valid():
             contrato = form.save(commit=False)
             contrato.propiedad = propiedad
             contrato.propietario = propietario
             contrato.inmobiliaria = inmobiliaria
-            
-            
             contrato.save()
+            
             messages.success(request, "Borrador del Contrato de Mandato creado exitosamente.")
-            # Redirigimos al detalle del contrato para el siguiente paso
             return redirect('gestion_arriendos:detalle_contrato_mandato', pk=contrato.pk)
     else:
-        # Pasamos la inmobiliaria al formulario para que filtre las plantillas
-        form = ContratoMandatoForm(inmobiliaria=inmobiliaria)
-        form.fields['cuenta_bancaria_pago'].queryset = propietario.cuentas_bancarias.all()
+        # CORRECCIÓN: Pasamos 'propietario' al constructor y eliminamos la línea manual
+        form = ContratoMandatoForm(inmobiliaria=inmobiliaria, propietario=propietario)
 
     context = {
         'form': form,
@@ -214,6 +213,7 @@ def editar_contrato_mandato(request, pk):
 
 # --- VISTA DE ELIMINACIÓN PARA CONTRATO DE MANDATO ---
 
+
 @login_required
 def eliminar_contrato_mandato(request, pk):
     """
@@ -222,20 +222,32 @@ def eliminar_contrato_mandato(request, pk):
     mandato = get_object_or_404(ContratoMandato, pk=pk, inmobiliaria=request.user.profile.inmobiliaria)
     propiedad_id = mandato.propiedad.id
 
-    # Validación: Solo se puede eliminar si está en estado Borrador
+    # La validación del estado "Borrador" la dejamos aquí para proteger el acceso
     if mandato.estado != 'BORRADOR':
         messages.error(request, "Este contrato no se puede eliminar porque ya no es un borrador.")
         return redirect('gestion_arriendos:detalle_contrato_mandato', pk=mandato.pk)
 
     if request.method == 'POST':
+        # --- VALIDACIÓN MOVIDA AQUÍ ---
+        # Ahora, solo validamos la dependencia ANTES de borrar, en el POST.
+        if mandato.contratos_arrendamiento.exists():
+            messages.error(
+                request, 
+                "No se puede eliminar este Contrato de Mandato porque ya tiene un Contrato de Arrendamiento asociado. "
+                "Utilice la opción 'Eliminar Proceso en Borrador' desde el panel de la propiedad."
+            )
+            # Redirigimos de vuelta al detalle del mandato, donde se mostrará el error.
+            return redirect('gestion_arriendos:detalle_contrato_mandato', pk=mandato.pk)
+        # ------------------------------------
+
         mandato.delete()
         messages.success(request, "El borrador del contrato ha sido eliminado exitosamente.")
-        # Redirigimos al panel de control de la propiedad
         return redirect('core_inmobiliario:detalle_propiedad', id=propiedad_id)
 
     context = {
         'contrato': mandato
     }
+    # Si la petición es GET, ahora siempre se mostrará la página de confirmación
     return render(request, 'gestion_arriendos/confirmar_eliminar_contrato.html', context)
 
 #--- Vista para eliminar todo el proceso en borrador (mandato + arrendamiento) ---
@@ -429,6 +441,33 @@ def descargar_borrador_contrato_arrendamiento(request, contrato_id):
     response['Content-Disposition'] = f'inline; filename="Borrador_Contrato_Arrendamiento_{contrato.id}.pdf"'
     
     return response
+
+# --- VISTA DE ELIMINACIÓN PARA CONTRATO DE ARRENDAMIENTO ---
+
+@login_required
+def eliminar_contrato_arrendamiento(request, pk):
+    """
+    Muestra una confirmación y elimina un Contrato de Arrendamiento en estado Borrador.
+    """
+    arrendamiento = get_object_or_404(ContratoArrendamiento, pk=pk, inmobiliaria=request.user.profile.inmobiliaria)
+    propiedad_id = arrendamiento.propiedad.id
+
+    # Validación: Solo se puede eliminar si está en estado Borrador
+    if arrendamiento.estado != 'BORRADOR':
+        messages.error(request, "Este contrato no se puede eliminar porque ya no es un borrador.")
+        return redirect('gestion_arriendos:detalle_contrato_arrendamiento', pk=arrendamiento.pk)
+
+    if request.method == 'POST':
+        arrendamiento.delete()
+        messages.success(request, "El borrador del Contrato de Arrendamiento ha sido eliminado exitosamente.")
+        # Redirigimos al panel de control de la propiedad
+        return redirect('core_inmobiliario:detalle_propiedad', id=propiedad_id)
+
+    context = {
+        'contrato': arrendamiento
+    }
+    return render(request, 'gestion_arriendos/confirmar_eliminar_contrato_arrendamiento.html', context)
+
 
 # --- Plantillas contratos ---
 

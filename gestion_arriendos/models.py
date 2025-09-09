@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+import num2words
 from usuarios.models import Inmobiliaria
 from core_inmobiliario.models import Propiedad, Cliente
 
@@ -127,14 +128,14 @@ class BaseContrato(models.Model):
     observaciones = models.TextField(blank=True)
     plantilla_usada = models.ForeignKey(PlantillaContrato, on_delete=models.SET_NULL, null=True, blank=True)
     clausulas_adicionales = models.TextField(blank=True)
-    # NUEVO CAMPO PARA GUARDAR EL PDF FINAL CUANDO SE ENVÍA A FIRMAS (se puede editar si se devuelve por parte de alguno de los actores)
+    # CAMPO PARA GUARDAR EL PDF FINAL CUANDO SE ENVÍA A FIRMAS (se puede editar si se devuelve por parte de alguno de los actores)
     archivo_pdf_final = models.FileField(
         upload_to='contratos_finales/', 
         blank=True, 
         null=True,
         help_text="El archivo PDF final que se genera al enviar a firmas."
     )
-    # --- NUEVO CAMPO PARA EL DOCUMENTO FIRMADO ---
+    # --- CAMPO PARA EL DOCUMENTO FIRMADO ---
     archivo_pdf_firmado = models.FileField(
         upload_to='contratos_firmados/',
         blank=True,
@@ -150,6 +151,19 @@ class BaseContrato(models.Model):
     )
     creado = models.DateTimeField(auto_now_add=True)
     actualizado = models.DateTimeField(auto_now=True)
+
+    @property
+    def get_uso_inmueble_legible(self):
+        """
+        Devuelve la versión legible del campo uso_inmueble.
+        Es un reemplazo manual y robusto para el .get_..._display() que está fallando.
+        """
+        # Convierte la lista de choices a un diccionario para una búsqueda fácil
+        # Ej: {'VIVIENDA': 'Vivienda', 'COMERCIAL': 'Comercial'}
+        choices_dict = dict(self.UsoInmueble.choices)
+        
+        # Busca el valor guardado (ej: 'VIVIENDA') en el diccionario y devuelve su etiqueta (ej: 'Vivienda')
+        return choices_dict.get(self.uso_inmueble, '') # Devuelve un texto vacío si no lo encuentra
 
     class Meta:
         abstract = True
@@ -170,6 +184,37 @@ class ContratoMandato(BaseContrato):
         default=True,
         help_text="Marca esta casilla si en el acuerdo la inmobiliaria es responsable de pagar la administración."
     )
+
+    @property
+    def arrendamiento_asociado(self):
+        """Atajo para encontrar el contrato de arrendamiento activo."""
+        return self.contratos_arrendamiento.first()
+
+    @property
+    def primera_vigencia_arrendamiento(self):
+        """Atajo para encontrar la primera vigencia del arrendamiento asociado."""
+        arrendamiento = self.arrendamiento_asociado
+        if arrendamiento:
+            return arrendamiento.vigencias.first()
+        return None
+
+    @property
+    def valor_canon_en_numeros(self):
+        """Devuelve el valor del canon desde la vigencia asociada."""
+        vigencia = self.primera_vigencia_arrendamiento
+        return vigencia.valor_canon if vigencia else 0
+            
+    @property
+    def fecha_inicio(self):
+        """Devuelve la fecha de inicio desde la vigencia asociada."""
+        vigencia = self.primera_vigencia_arrendamiento
+        return vigencia.fecha_inicio if vigencia else None
+
+    @property
+    def uso_inmueble_display(self):
+        """Reemplazo manual y robusto para get_uso_inmueble_display."""
+        return self.get_uso_inmueble_display()
+    # --- FIN DE LAS PROPIEDADES INTELIGENTES ---
 
     def __str__(self):
         return f"Mandato de {self.propiedad.direccion} con {self.propietario.nombre}"

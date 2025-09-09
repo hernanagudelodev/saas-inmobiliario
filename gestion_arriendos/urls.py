@@ -20,6 +20,7 @@ urlpatterns = [
     path('contratos/arrendamiento/<int:contrato_id>/descargar-borrador/', views.descargar_borrador_contrato_arrendamiento, name='descargar_borrador_contrato_arrendamiento'),
     path('contratos/arrendamiento/<int:pk>/editar/', views.editar_contrato_arrendamiento, name='editar_contrato_arrendamiento'),
     path('ciclo/<int:propiedad_id>/eliminar-borrador/', views.eliminar_proceso_borrador, name='eliminar_proceso_borrador'),
+    path('contratos/arrendamiento/<int:pk>/eliminar/', views.eliminar_contrato_arrendamiento, name='eliminar_contrato_arrendamiento'),
 
     path('plantillas/', views.ListaPlantillas.as_view(), name='lista_plantillas'),
     path('plantillas/crear/', views.CrearPlantilla.as_view(), name='crear_plantilla'),

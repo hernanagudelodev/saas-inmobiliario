@@ -3,6 +3,7 @@
 {% block title %}Detalle del Contrato de Mandato{% endblock %}
 
 {% block content %}
+
 <div class="container" style="max-width: 900px;">
   <div class="card shadow-sm mt-4">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
@@ -45,6 +46,9 @@
         <div class="mt-4 text-center">
             <a href="{% url 'gestion_arriendos:editar_contrato_mandato' contrato.id %}" class="btn btn-secondary">
                 <i class="bi bi-pencil-fill"></i> Editar Términos
+            </a>
+            <a href="{% url 'gestion_arriendos:eliminar_contrato_mandato' contrato.id %}" class="btn btn-outline-danger">
+              <i class="bi bi-trash"></i> Eliminar Borrador
             </a>
             <a href="{% url 'core_inmobiliario:detalle_propiedad' contrato.propiedad.id %}" class="btn btn-outline-primary">Volver a la Propiedad</a>
         </div>

@@ -6,14 +6,17 @@ register = template.Library()
 @register.filter(name='a_letras')
 def a_letras(numero):
     """
-    Convierte un número a su representación en letras en español.
+    Convierte un número (incluyendo tipo Decimal de Django) a letras en español.
     """
     if numero is None:
         return ""
+    
     try:
-        # Usamos lang='es' para español.
-        return num2words(numero, lang='es')
-    except Exception:
+        # Nos aseguramos de convertir el número a un entero simple antes de pasarlo a num2words
+        valor_entero = int(numero)
+        return num2words(valor_entero, lang='es').title()
+    except (ValueError, TypeError):
+        # Si algo falla, devolvemos el número original para no perder la información
         return numero
 
 @register.inclusion_tag('gestion_arriendos/tags/lista_codeudores.html')

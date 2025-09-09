@@ -3,6 +3,7 @@ from django import forms
 from core_inmobiliario.models import Cliente, CuentaBancaria, PropiedadCliente
 from .models import ContratoArrendamiento, ContratoMandato, PlantillaContrato
 
+
 class ContratoMandatoForm(forms.ModelForm):
     plantilla_usada = forms.ModelChoiceField(
         queryset=PlantillaContrato.objects.none(),
@@ -34,11 +35,16 @@ class ContratoMandatoForm(forms.ModelForm):
             'observaciones',
             'clausulas_adicionales',
         ]
+        widgets = {
+            'periodicidad': forms.Select(attrs={'class': 'form-select'}),
+            'uso_inmueble': forms.Select(attrs={'class': 'form-select'}),
+            'renovacion_automatica': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
 
     def __init__(self, *args, **kwargs):
-        # Capturamos y removemos nuestros argumentos personalizados ANTES de continuar
+        # Capturamos y removemos nuestros argumentos personalizados ANTES de llamar al constructor padre
         inmobiliaria = kwargs.pop('inmobiliaria', None)
-        propietario = kwargs.pop('propietario', None) # <-- ¡LA LÍNEA QUE FALTABA!
+        propietario = kwargs.pop('propietario', None)
         
         # Llamamos al constructor padre, pero ya sin los argumentos personalizados
         super().__init__(*args, **kwargs)
