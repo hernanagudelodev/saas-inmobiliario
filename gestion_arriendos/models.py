@@ -1,8 +1,18 @@
+import locale
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 import num2words
 from usuarios.models import Inmobiliaria
 from core_inmobiliario.models import Propiedad, Cliente
+
+# Intentamos configurar la localización para español Colombia
+try:
+    locale.setlocale(locale.LC_ALL, 'es_CO.UTF-8')
+except locale.Error:
+    try:
+        locale.setlocale(locale.LC_ALL, 'es-CO')
+    except locale.Error:
+        pass # Si falla, usaremos un formato manual
 
 # ==============================================================================
 # MODELO DE CONFIGURACIÓN OPERATIVA
@@ -165,6 +175,63 @@ class BaseContrato(models.Model):
         # Busca el valor guardado (ej: 'VIVIENDA') en el diccionario y devuelve su etiqueta (ej: 'Vivienda')
         return choices_dict.get(self.uso_inmueble, '') # Devuelve un texto vacío si no lo encuentra
 
+    @property
+    def primera_vigencia(self):
+        """
+        Atajo para encontrar la primera vigencia. Este método DEBE ser implementado
+        por las clases hijas (Mandato y Arrendamiento).
+        """
+        raise NotImplementedError("Las clases hijas deben implementar 'primera_vigencia'")
+
+    @property
+    def valor_canon(self):
+        """Devuelve el valor del canon numérico desde la vigencia."""
+        vigencia = self.primera_vigencia
+        return vigencia.valor_canon if vigencia else 0
+
+    @property
+    def valor_canon_formateado(self):
+        """Devuelve el canon con formato de moneda colombiana."""
+        valor = self.valor_canon
+        try:
+            return locale.currency(valor, grouping=True, symbol='$ ')
+        except:
+            return f"$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    @property
+    def valor_canon_en_letras(self):
+        """Devuelve el canon en letras con formato de título."""
+        valor = self.valor_canon
+        if not valor or valor == 0:
+            return "Cero"
+        try:
+            return num2words(int(valor), lang='es').title()
+        except:
+            return "Error de Conversión"
+
+    @property
+    def fecha_inicio(self):
+        """Devuelve la fecha de inicio de la vigencia."""
+        vigencia = self.primera_vigencia
+        return vigencia.fecha_inicio if vigencia else None
+
+    @property
+    def fecha_fin(self):
+        """Devuelve la fecha de fin de la vigencia."""
+        vigencia = self.primera_vigencia
+        return vigencia.fecha_fin if vigencia else None
+        
+    @property
+    def duracion_en_meses(self):
+        """Calcula la duración en meses."""
+        if not self.fecha_inicio or not self.fecha_fin:
+            return 0
+        
+        meses = (self.fecha_fin.year - self.fecha_inicio.year) * 12 + (self.fecha_fin.month - self.fecha_inicio.month)
+        if self.fecha_fin.day >= self.fecha_inicio.day:
+            meses += 1
+        return meses
+
     class Meta:
         abstract = True
 
@@ -184,37 +251,17 @@ class ContratoMandato(BaseContrato):
         default=True,
         help_text="Marca esta casilla si en el acuerdo la inmobiliaria es responsable de pagar la administración."
     )
-
+    
     @property
-    def arrendamiento_asociado(self):
-        """Atajo para encontrar el contrato de arrendamiento activo."""
-        return self.contratos_arrendamiento.first()
-
-    @property
-    def primera_vigencia_arrendamiento(self):
-        """Atajo para encontrar la primera vigencia del arrendamiento asociado."""
-        arrendamiento = self.arrendamiento_asociado
+    def primera_vigencia(self):
+        """
+        Implementación para el Mandato: busca la vigencia a través
+        de su Contrato de Arrendamiento asociado.
+        """
+        arrendamiento = self.contratos_arrendamiento.first()
         if arrendamiento:
             return arrendamiento.vigencias.first()
         return None
-
-    @property
-    def valor_canon_en_numeros(self):
-        """Devuelve el valor del canon desde la vigencia asociada."""
-        vigencia = self.primera_vigencia_arrendamiento
-        return vigencia.valor_canon if vigencia else 0
-            
-    @property
-    def fecha_inicio(self):
-        """Devuelve la fecha de inicio desde la vigencia asociada."""
-        vigencia = self.primera_vigencia_arrendamiento
-        return vigencia.fecha_inicio if vigencia else None
-
-    @property
-    def uso_inmueble_display(self):
-        """Reemplazo manual y robusto para get_uso_inmueble_display."""
-        return self.get_uso_inmueble_display()
-    # --- FIN DE LAS PROPIEDADES INTELIGENTES ---
 
     def __str__(self):
         return f"Mandato de {self.propiedad.direccion} con {self.propietario.nombre}"
@@ -237,6 +284,14 @@ class ContratoArrendamiento(BaseContrato):
         related_name='contratos_codeudor', 
         blank=True
     )
+
+    @property
+    def primera_vigencia(self):
+        """
+        Implementación para el Arrendamiento: busca la vigencia
+        directamente en sus relaciones.
+        """
+        return self.vigencias.first()
 
     def __str__(self):
         return f"Arrendamiento de {self.propiedad.direccion} a {self.arrendatario.nombre}"

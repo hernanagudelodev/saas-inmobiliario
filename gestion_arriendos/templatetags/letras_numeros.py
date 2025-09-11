@@ -1,3 +1,4 @@
+import locale
 from django import template
 from num2words import num2words
 
@@ -62,3 +63,23 @@ def firmas_codeudores(contrato):
     codeudores = contrato.codeudores.all()
     return {'codeudores': codeudores}
 # --------------------------------------------------
+
+
+@register.filter(name='formato_moneda')
+def formato_moneda(valor):
+    """
+    Formatea un número como moneda colombiana (ej: $ 1.800.000,00).
+    """
+    try:
+        # Intentamos establecer la configuración regional para Colombia
+        locale.setlocale(locale.LC_ALL, 'es_CO.UTF-8')
+    except locale.Error:
+        try:
+            # Un formato alternativo que a veces funciona en Windows
+            locale.setlocale(locale.LC_ALL, 'es-CO')
+        except locale.Error:
+            # Si todo falla, usamos un formato manual simple
+            return f"$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    # Usamos la librería 'locale' para dar el formato correcto con separadores de miles
+    return locale.currency(valor, grouping=True, symbol='$')
