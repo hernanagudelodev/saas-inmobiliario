@@ -29,13 +29,9 @@
         </div>
         <ul class="list-group list-group-flush">
             <li class="list-group-item"><strong>Plantilla Utilizada:</strong> {{ contrato.plantilla_usada.nombre }}</li>
-            {% with primera_vigencia=contrato.vigencias.first %}
-              {% if primera_vigencia %}
-                <li class="list-group-item"><strong>Valor del Canon:</strong> ${{ primera_vigencia.valor_canon|floatformat:2 }}</li>
-                <li class="list-group-item"><strong>Período Inicial:</strong> Del {{ primera_vigencia.fecha_inicio }} al {{ primera_vigencia.fecha_fin }}</li>
-                <li class="list-group-item"><strong>Duración:</strong> {{ contrato|duracion_en_meses }} meses</li>
-              {% endif %}
-            {% endwith %}
+            <li class="list-group-item"><strong>Valor del Canon:</strong> {{ contrato.valor_canon_formateado }}</li>
+            <li class="list-group-item"><strong>Período Inicial:</strong> Del {{ contrato.fecha_inicio }} al {{ contrato.fecha_fin }}</li>
+            <li class="list-group-item"><strong>Duración:</strong> {{ contrato.duracion_en_meses }}</li>
             <li class="list-group-item"><strong>Plazo para Pago:</strong> Primeros {{ contrato.dias_plazo_pago }} días del mes</li>
         </ul>
       </div>
@@ -45,7 +41,6 @@
           <h5 class="alert-heading"><i class="bi bi-eye"></i> Previsualización del Borrador en PDF</h5>
           <p>Revisa el documento completo. Si los términos son correctos, puedes volver al panel de la propiedad para continuar el proceso.</p>
         </div>
-        
         <div class="pdf-container mb-4">
             <iframe 
                 src="{% url 'gestion_arriendos:descargar_borrador_contrato_arrendamiento' contrato.id %}"
@@ -53,20 +48,59 @@
                 title="Borrador de Contrato de Arrendamiento PDF">
             </iframe>
         </div>
-        
         <div class="mt-4 text-center">
-          <a href="{% url 'gestion_arriendos:editar_contrato_arrendamiento' contrato.id %}" class="btn btn-secondary">
-              <i class="bi bi-pencil-fill"></i> Editar Términos
-          </a>
-          <a href="{% url 'gestion_arriendos:eliminar_contrato_arrendamiento' contrato.id %}" class="btn btn-outline-danger">
-              <i class="bi bi-trash"></i> Eliminar Borrador
-          </a>
-            <a href="{% url 'core_inmobiliario:detalle_propiedad' contrato.propiedad.id %}" class="btn btn-outline-primary">Volver a la Propiedad</a>
+          <a href="{% url 'gestion_arriendos:editar_contrato_arrendamiento' contrato.id %}" class="btn btn-secondary"><i class="bi bi-pencil-fill"></i> Editar Términos</a>
+          <a href="{% url 'gestion_arriendos:eliminar_contrato_arrendamiento' contrato.id %}" class="btn btn-outline-danger"><i class="bi bi-trash"></i> Eliminar Borrador</a>
         </div>
 
-      {% else %}
-        <p>Funcionalidad para estados 'En Firmas' y 'Vigente' pendiente.</p>
+      {% else %} {% if contrato.estado == 'EN_FIRMAS' %}
+          <div class="alert alert-info">
+            <h5 class="alert-heading"><i class="bi bi-pen"></i> Contrato en Proceso de Firmas</h5>
+            <p>Descarga el documento final para enviarlo a tu plataforma de firma electrónica. Una vez firmado por todas las partes, sube el archivo PDF final para completar el proceso.</p>
+          </div>
+
+          <div class="pdf-container mb-4 text-center">
+              <a href="{{ contrato.archivo_pdf_final.url }}" target="_blank" class="btn btn-primary btn-lg">
+                  <i class="bi bi-file-earmark-pdf"></i> Ver/Descargar PDF para Firmar
+              </a>
+          </div>
+
+          <div class="card mt-4">
+            <div class="card-header"><h6 class="mb-0">Paso Final: Subir Contrato Firmado</h6></div>
+            <div class="card-body">
+              <form action="{% url 'gestion_arriendos:subir_arrendamiento_firmado' contrato.id %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="id_archivo_pdf_firmado" class="form-label">Selecciona el archivo PDF firmado:</label>
+                    <input type="file" name="archivo_pdf_firmado" class="form-control" required id="id_archivo_pdf_firmado" accept="application/pdf">
+                </div>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> Confirmar Firma y Activar Contrato
+                </button>
+              </form>
+            </div>
+          </div>
+
+        {% elif contrato.estado == 'VIGENTE' %}
+          <div class="alert alert-success">
+            <h5 class="alert-heading"><i class="bi bi-file-earmark-check"></i> Contrato Vigente</h5>
+            <p>Este contrato ha sido firmado y se encuentra activo.</p>
+          </div>
+          <div class="pdf-container mb-4 text-center">
+              <a href="{{ contrato.archivo_pdf_firmado.url }}" target="_blank" class="btn btn-success btn-lg">
+                  <i class="bi bi-file-earmark-lock"></i> Ver Contrato Firmado
+              </a>
+          </div>
+        {% endif %}
+
       {% endif %}
+
+      <hr>
+      <div class="text-center">
+        <a href="{% url 'core_inmobiliario:detalle_propiedad' contrato.propiedad.id %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left-circle"></i> Volver al Panel de la Propiedad
+        </a>
+      </div>
 
     </div>
   </div>

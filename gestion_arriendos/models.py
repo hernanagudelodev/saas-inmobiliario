@@ -1,7 +1,7 @@
 import locale
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
-import num2words
+from num2words import num2words
 from usuarios.models import Inmobiliaria
 from core_inmobiliario.models import Propiedad, Cliente
 
@@ -187,7 +187,10 @@ class BaseContrato(models.Model):
     def valor_canon(self):
         """Devuelve el valor del canon numérico desde la vigencia."""
         vigencia = self.primera_vigencia
-        return vigencia.valor_canon if vigencia else 0
+        if vigencia is None:
+            return "(Pendiente por definir en Contrato de Arrendamiento)"
+        else:
+            return vigencia.valor_canon
 
     @property
     def valor_canon_formateado(self):
@@ -200,26 +203,38 @@ class BaseContrato(models.Model):
 
     @property
     def valor_canon_en_letras(self):
-        """Devuelve el canon en letras con formato de título."""
+        """Devuelve el canon en letras con formato de título, manejando el tipo Decimal."""
         valor = self.valor_canon
         if not valor or valor == 0:
             return "Cero"
         try:
-            return num2words(int(valor), lang='es').title()
-        except:
+            # --- LA CORRECCIÓN CLAVE ---
+            # Forzamos la conversión del valor Decimal a un entero (int)
+            # antes de pasarlo a la librería num2words.
+            valor_entero = int(valor)
+            return num2words(valor_entero, lang='es').title()
+            # --------------------------
+        except (ValueError, TypeError):
+            # Mantenemos esto como una red de seguridad
             return "Error de Conversión"
 
     @property
     def fecha_inicio(self):
         """Devuelve la fecha de inicio de la vigencia."""
         vigencia = self.primera_vigencia
-        return vigencia.fecha_inicio if vigencia else None
+        if vigencia is None:
+            return "(Pendiente por definir en Contrato de Arrendamiento)"
+        else:
+            return vigencia.fecha_inicio
 
     @property
     def fecha_fin(self):
         """Devuelve la fecha de fin de la vigencia."""
         vigencia = self.primera_vigencia
-        return vigencia.fecha_fin if vigencia else None
+        if vigencia is None:
+            return "(Pendiente por definir en Contrato de Arrendamiento)"
+        else:
+            return vigencia.fecha_fin
         
     @property
     def duracion_en_meses(self):

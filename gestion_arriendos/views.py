@@ -7,12 +7,13 @@ from core_inmobiliario.models import Propiedad
 from inventarioapp.models import FormularioCaptacion
 from .models import ContratoMandato, PlantillaContrato, ContratoArrendamiento, VigenciaContrato
 from usuarios.mixins import TenantRequiredMixin
-from .forms import ContratoMandatoForm, PlantillaContratoForm,ContratoArrendamientoForm
+from .forms import ContratoMandatoForm, PlantillaContratoForm,ContratoArrendamientoForm, SubirArrendamientoFirmadoForm, SubirMandatoFirmadoForm
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 from weasyprint import HTML
+from django.core.files.base import ContentFile
 
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
@@ -467,6 +468,98 @@ def eliminar_contrato_arrendamiento(request, pk):
         'contrato': arrendamiento
     }
     return render(request, 'gestion_arriendos/confirmar_eliminar_contrato_arrendamiento.html', context)
+
+# --- NUEVA VISTA PARA LA LÓGICA DE "ENVIAR A FIRMAS" ---
+
+@login_required
+def enviar_ciclo_a_firmas(request, propiedad_id):
+    propiedad = get_object_or_404(Propiedad, id=propiedad_id, inmobiliaria=request.user.profile.inmobiliaria)
+    
+    # Buscamos los contratos activos en estado borrador para esta propiedad
+    mandato = ContratoMandato.objects.filter(propiedad=propiedad, estado='BORRADOR').first()
+    arrendamiento = ContratoArrendamiento.objects.filter(propiedad=propiedad, estado='BORRADOR').first()
+
+    if not mandato or not arrendamiento:
+        messages.error(request, "Error: No se encontraron ambos contratos en estado 'Borrador' para esta propiedad.")
+        return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
+
+    # --- Generar y guardar PDF del Contrato de Mandato (SIN marca de agua) ---
+    plantilla_mandato = mandato.plantilla_usada
+    template_string_mandato = "{% load letras_numeros %}" + plantilla_mandato.cuerpo_texto
+    contexto_mandato = { "contrato": mandato, "propiedad": propiedad, "propietario": mandato.propietario, "inmobiliaria": mandato.inmobiliaria }
+    template_m = engines['django'].from_string(template_string_mandato)
+    clausulas_m = template_m.render(contexto_mandato)
+    html_string_mandato = render_to_string('gestion_arriendos/base_contrato_pdf.html', {
+        'cuerpo_renderizado': clausulas_m, 'titulo_contrato': plantilla_mandato.titulo, 'inmobiliaria': mandato.inmobiliaria
+    })
+    pdf_mandato = HTML(string=html_string_mandato, base_url=request.build_absolute_uri()).write_pdf()
+    mandato.archivo_pdf_final.save(f"Contrato_Mandato_Final_{mandato.id}.pdf", ContentFile(pdf_mandato), save=False)
+    mandato.estado = 'EN_FIRMAS'
+    mandato.save()
+
+    # --- Generar y guardar PDF del Contrato de Arrendamiento (SIN marca de agua) ---
+    plantilla_arr = arrendamiento.plantilla_usada
+    template_string_arr = "{% load letras_numeros %}" + plantilla_arr.cuerpo_texto
+    contexto_arr = { "contrato": arrendamiento, "propiedad": propiedad, "arrendatario": arrendamiento.arrendatario, "inmobiliaria": arrendamiento.inmobiliaria }
+    template_a = engines['django'].from_string(template_string_arr)
+    clausulas_a = template_a.render(contexto_arr)
+    html_string_arrendamiento = render_to_string('gestion_arriendos/base_contrato_pdf.html', {
+        'cuerpo_renderizado': clausulas_a, 'titulo_contrato': plantilla_arr.titulo, 'inmobiliaria': arrendamiento.inmobiliaria
+    })
+    pdf_arrendamiento = HTML(string=html_string_arrendamiento, base_url=request.build_absolute_uri()).write_pdf()
+    arrendamiento.archivo_pdf_final.save(f"Contrato_Arrendamiento_Final_{arrendamiento.id}.pdf", ContentFile(pdf_arrendamiento), save=False)
+    arrendamiento.estado = 'EN_FIRMAS'
+    arrendamiento.save()
+
+    messages.success(request, "Los contratos han sido finalizados y enviados al proceso de firmas.")
+    return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
+
+
+# --- VISTA PARA SUBIR EL CONTRATO DE MANDATO FIRMADO ---
+
+@login_required
+def subir_mandato_firmado(request, pk):
+    mandato = get_object_or_404(ContratoMandato, pk=pk, inmobiliaria=request.user.profile.inmobiliaria)
+
+    # Solo se puede subir un archivo si el contrato está en proceso de firmas
+    if mandato.estado != 'EN_FIRMAS':
+        messages.error(request, "Solo se puede subir un archivo a un contrato que está 'En Proceso de Firmas'.")
+        return redirect('gestion_arriendos:detalle_contrato_mandato', pk=mandato.pk)
+
+    if request.method == 'POST':
+        # Usamos el nuevo formulario específico que creamos
+        form = SubirMandatoFirmadoForm(request.POST, request.FILES, instance=mandato)
+        if form.is_valid():
+            mandato = form.save(commit=False)
+            mandato.estado = 'VIGENTE' # ¡El estado final cambia a Vigente!
+            mandato.save()
+            messages.success(request, "El contrato firmado se ha subido y el estado se ha actualizado a 'Vigente'.")
+            return redirect('gestion_arriendos:detalle_contrato_mandato', pk=mandato.pk)
+    else:
+        # Si no es POST, no hacemos nada y redirigimos
+        return redirect('gestion_arriendos:detalle_contrato_mandato', pk=mandato.pk)
+
+@login_required
+def subir_arrendamiento_firmado(request, pk):
+    arrendamiento = get_object_or_404(ContratoArrendamiento, pk=pk, inmobiliaria=request.user.profile.inmobiliaria)
+
+    # Solo se puede subir un archivo si el contrato está en proceso de firmas
+    if arrendamiento.estado != 'EN_FIRMAS':
+        messages.error(request, "Solo se puede subir un archivo a un contrato que está 'En Proceso de Firmas'.")
+        return redirect('gestion_arriendos:detalle_contrato_arrendamiento', pk=arrendamiento.pk)
+
+    if request.method == 'POST':
+        # Usamos el formulario específico para el Contrato de Arrendamiento
+        form = SubirArrendamientoFirmadoForm(request.POST, request.FILES, instance=arrendamiento)
+        if form.is_valid():
+            arrendamiento = form.save(commit=False)
+            arrendamiento.estado = 'VIGENTE' # Cambiamos el estado a Vigente
+            arrendamiento.save()
+            messages.success(request, "El contrato firmado se ha subido y el estado se ha actualizado a 'Vigente'.")
+            return redirect('gestion_arriendos:detalle_contrato_arrendamiento', pk=arrendamiento.pk)
+    else:
+        # Si no es POST, no hacemos nada y redirigimos
+        return redirect('gestion_arriendos:detalle_contrato_arrendamiento', pk=arrendamiento.pk)
 
 
 # --- Plantillas contratos ---

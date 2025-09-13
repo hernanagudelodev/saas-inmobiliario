@@ -120,15 +120,21 @@
               <li><strong>Contrato de Arrendamiento:</strong> {{ contrato_arrendamiento.get_estado_display }} <a href="{% url 'gestion_arriendos:detalle_contrato_arrendamiento' contrato_arrendamiento.id %}" class="ms-2">Ver Detalle</a></li>
             </ul>
             
-            {% if contrato_mandato.estado == 'BORRADOR' %}
+            {% if contrato_mandato.estado == 'BORRADOR' and contrato_arrendamiento.estado == 'BORRADOR' %}
+              <a href="{% url 'gestion_arriendos:enviar_ciclo_a_firmas' propiedad.id %}" class="btn btn-sm btn-success">
+                  <i class="bi bi-send"></i> Enviar a Firmas
+              </a>
+              {% if contrato_mandato %}
               <div class="mt-3">
-                <a href="{% url 'gestion_arriendos:eliminar_proceso_borrador' propiedad.id %}" class="btn btn-sm btn-outline-danger">
-                    <i class="bi bi-trash"></i> Eliminar Proceso en Borrador
-                </a>
+                  <a href="{% url 'gestion_arriendos:eliminar_proceso_borrador' propiedad.id %}" class="btn btn-sm btn-outline-danger">
+                      <i class="bi bi-trash"></i> Eliminar Proceso en Borrador
+                  </a>
               </div>
-              <button class="btn btn-sm btn-success disabled">Enviar a Firmas (Próximamente)</button>
-            {% elif contrato_mandato.estado == 'EN_FIRMAS' %}
               {% endif %}
+            {% elif contrato_mandato.estado == 'EN_FIRMAS' %}
+              <button class="btn btn-sm btn-info disabled">Confirmar Firmas (Próximamente)</button>
+              <button class="btn btn-sm btn-outline-secondary disabled">Revertir a Borrador (Próximamente)</button>
+            {% endif %}
           {% endif %}
         </div>
       {% endif %}

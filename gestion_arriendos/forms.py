@@ -161,3 +161,22 @@ class ContratoArrendamientoForm(forms.ModelForm):
             ).values_list('cliente_id', flat=True)
             self.fields['codeudores'].queryset = Cliente.objects.filter(pk__in=codeudores_pks)
             # ---------------------------------------------
+
+# --- FORMULARIO PARA SUBIR EL MANDATO FIRMADO ---
+class SubirMandatoFirmadoForm(forms.ModelForm):
+    class Meta:
+        model = ContratoMandato
+        fields = ['archivo_pdf_firmado']
+        widgets = {
+            'archivo_pdf_firmado': forms.FileInput(attrs={'class': 'form-control'})
+        }
+
+# --- FORMULARIO PARA SUBIR EL ARRENDAMIENTO FIRMADO ---
+class SubirArrendamientoFirmadoForm(forms.ModelForm):
+    class Meta:
+        model = ContratoArrendamiento
+        fields = ['archivo_pdf_firmado']
+        widgets = {
+            'archivo_pdf_firmado': forms.FileInput(attrs={'class': 'form-control'})
+        }
+

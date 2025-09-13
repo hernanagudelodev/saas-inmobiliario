@@ -3,7 +3,6 @@
 {% block title %}Detalle del Contrato de Mandato{% endblock %}
 
 {% block content %}
-
 <div class="container" style="max-width: 900px;">
   <div class="card shadow-sm mt-4">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
@@ -50,34 +49,56 @@
             <a href="{% url 'gestion_arriendos:eliminar_contrato_mandato' contrato.id %}" class="btn btn-outline-danger">
               <i class="bi bi-trash"></i> Eliminar Borrador
             </a>
-            <a href="{% url 'core_inmobiliario:detalle_propiedad' contrato.propiedad.id %}" class="btn btn-outline-primary">Volver a la Propiedad</a>
         </div>
 
-      {% else %}
-        <div class="alert alert-success">
-          <h5 class="alert-heading"><i class="bi bi-file-earmark-check"></i> Contrato Finalizado</h5>
-          <p>Este es el documento final que está pendiente de firma.</p>
-        </div>
-
-        <div class="pdf-container mb-4">
-            {% if contrato.archivo_pdf_final %}
-                <iframe 
-                    src="{{ contrato.archivo_pdf_final.url }}"
-                    style="width: 100%; height: 75vh; border: 1px solid #dee2e6;"
-                    title="Contrato Final PDF">
-                </iframe>
-            {% else %}
-                <p class="text-center text-muted">No se ha generado un archivo PDF para este contrato.</p>
-            {% endif %}
-        </div>
-  
-        <div class="mt-4">
-          <h5 class="mb-3">Firma del Contrato</h5>
+      {% else %} {% if contrato.estado == 'EN_FIRMAS' %}
           <div class="alert alert-info">
-            <i class="bi bi-vector-pen"></i> La funcionalidad de firma digital se agregará aquí.
+            <h5 class="alert-heading"><i class="bi bi-pen"></i> Contrato en Proceso de Firmas</h5>
+            <p>Descarga el documento final para enviarlo a tu plataforma de firma electrónica. Una vez firmado por todas las partes, sube el archivo PDF final para completar el proceso.</p>
           </div>
-        </div>
+
+          <div class="pdf-container mb-4 text-center">
+              <a href="{{ contrato.archivo_pdf_final.url }}" target="_blank" class="btn btn-primary btn-lg">
+                  <i class="bi bi-file-earmark-pdf"></i> Ver/Descargar PDF para Firmar
+              </a>
+          </div>
+
+          <div class="card mt-4">
+            <div class="card-header"><h6 class="mb-0">Subir Contrato Firmado</h6></div>
+            <div class="card-body">
+              <form action="{% url 'gestion_arriendos:subir_mandato_firmado' contrato.id %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="id_archivo_pdf_firmado" class="form-label">Selecciona el archivo PDF firmado:</label>
+                    <input type="file" name="archivo_pdf_firmado" class="form-control" required id="id_archivo_pdf_firmado" accept="application/pdf">
+                </div>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> Confirmar Firma y Subir Archivo
+                </button>
+              </form>
+            </div>
+          </div>
+
+        {% elif contrato.estado == 'VIGENTE' %}
+          <div class="alert alert-success">
+            <h5 class="alert-heading"><i class="bi bi-file-earmark-check"></i> Contrato Vigente</h5>
+            <p>Este contrato ha sido firmado y se encuentra activo.</p>
+          </div>
+          <div class="pdf-container mb-4 text-center">
+              <a href="{{ contrato.archivo_pdf_firmado.url }}" target="_blank" class="btn btn-success btn-lg">
+                  <i class="bi bi-file-earmark-lock"></i> Ver Contrato Firmado
+              </a>
+          </div>
+        {% endif %}
+
       {% endif %}
+
+      <hr>
+      <div class="text-center">
+        <a href="{% url 'core_inmobiliario:detalle_propiedad' contrato.propiedad.id %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left-circle"></i> Volver al Panel de la Propiedad
+        </a>
+      </div>
 
     </div>
   </div>
