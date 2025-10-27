@@ -1,4 +1,6 @@
 from django.shortcuts import render,get_object_or_404, redirect
+
+from gestion_arriendos.models import ContratoMandato
 from .models import *
 from core_inmobiliario.models import Cliente, Propiedad, PropiedadCliente
 from django.db.models import Q
@@ -141,56 +143,32 @@ def home(request):
     )
 
 
-'''
-FORMULARIO DE ENTREGA
-A partir de esta linea se hacen las vistas para la creación de formularios de entrega
-'''
-
-'''
-La primera vista crea la relación entre cliente y propiedad.
-'''
-""" @login_required
-def crear_formulario_entrega(request, propiedad_id):
-    propiedad = get_object_or_404(Propiedad, id=propiedad_id)
-    if request.method == 'POST':
-        form = SeleccionarPropiedadClienteForm(request.POST, propiedad=propiedad)
-        if form.is_valid():
-            cliente = form.cleaned_data['cliente']
-            # Busca o crea la relación arrendatario-propiedad
-            prop_cliente, created = PropiedadCliente.objects.get_or_create(
-                cliente=cliente,
-                propiedad=propiedad,
-                relacion=PropiedadCliente.ARRENDATARIO
-            )
-            # Verifica si hay captación firmada
-            captacion_firmada = FormularioCaptacion.objects.filter(
-                propiedad_cliente__propiedad=propiedad,
-                is_firmado=True
-            ).exists()
-            if not captacion_firmada:
-                messages.error(
-                    request,
-                    "No se puede crear un formulario de entrega: no existe una captación firmada para esta propiedad."
-                )
-                return redirect('core_inmobiliario:detalle_propiedad', propiedad_id=propiedad.id)
-
-            entrega = FormularioEntrega.objects.create(propiedad_cliente=prop_cliente)
-            messages.success(request, "Formulario de entrega creado exitosamente.")
-            return redirect('inventarioapp:agregar_ambiente', entrega_id=entrega.id)
-    else:
-        form = SeleccionarPropiedadClienteForm(propiedad=propiedad)
-    return render(request, 'inventarioapp/entrega/crear_formulario_entrega.html', {'form': form, 'propiedad': propiedad}) """
-
-
-# inventarioapp/views.py
-
 @login_required
 def crear_formulario_entrega(request, propiedad_id):
     propiedad = get_object_or_404(Propiedad, id=propiedad_id)
+
+    existe_mandato_migrado = ContratoMandato.objects.filter(
+        propiedad=propiedad,
+        es_contrato_migrado=True
+    ).exists()
+
+    # Solo validamos la existencia de captación firmada si NO hay un mandato migrado.
+    if not existe_mandato_migrado:
+        captacion_firmada = FormularioCaptacion.objects.filter(
+            propiedad_cliente__propiedad=propiedad,
+            is_firmado=True
+        ).exists()
+        if not captacion_firmada:
+            messages.error(
+                request,
+                "No se puede crear un formulario de entrega: debe existir una captación firmada para esta propiedad o un contrato de mandato marcado como 'migrado'."
+            )
+            # Redirigimos al detalle de la propiedad
+            return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
+
     if request.method == 'POST':
         form = SeleccionarPropiedadClienteForm(request.POST, propiedad=propiedad)
 
-        # --- TU SOLUCIÓN (¡CORRECTA!) ---
         # Asignamos los datos que faltan a la instancia del formulario ANTES de validar.
         try:
             form.instance.inmobiliaria = request.user.profile.inmobiliaria
@@ -210,18 +188,6 @@ def crear_formulario_entrega(request, propiedad_id):
                 relacion=PropiedadCliente.ARRENDATARIO,
                 defaults={'inmobiliaria': request.user.profile.inmobiliaria}
             )
-
-            # Verifica si hay captación firmada
-            captacion_firmada = FormularioCaptacion.objects.filter(
-                propiedad_cliente__propiedad=propiedad,
-                is_firmado=True
-            ).exists()
-            if not captacion_firmada:
-                messages.error(
-                    request,
-                    "No se puede crear un formulario de entrega: no existe una captación firmada para esta propiedad."
-                )
-                return redirect('inventarioapp:detalle_propiedad', id=propiedad.id)
 
             entrega = FormularioEntrega.objects.create(propiedad_cliente=prop_cliente)
             messages.success(request, "Formulario de entrega creado exitosamente.")
@@ -408,9 +374,34 @@ def ver_pdf_formulario_entrega(request, entrega_id):
     entrega = get_object_or_404(FormularioEntrega, id=entrega_id)
     ambientes = entrega.ambientes.prefetch_related('items').all()
 
+    try:
+        inmobiliaria = request.user.profile.inmobiliaria
+    except Exception:
+        # Manejar el caso donde el usuario (quizás admin) no tiene inmobiliaria asociada
+        # Podrías asignar una por defecto o mostrar un error.
+        # Por ahora, simplemente no la pasaremos si no existe.
+        inmobiliaria = None
+    
+    MESES = [
+        "enero", "febrero", "marzo", "abril", "mayo", "junio",
+        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+    ]
+    nombre_mes = ""
+    dia_letras = ""
+    anio_letras = ""
+    if entrega.fecha_firma: # Solo calculamos si hay fecha de firma
+        nombre_mes = MESES[entrega.fecha_firma.month - 1]
+        dia_letras = numero_a_letras(entrega.fecha_firma.day).capitalize() # Asegúrate que numero_a_letras exista
+        anio_letras = anio_a_letras(entrega.fecha_firma.year) # Asegúrate que anio_a_letras exista
+    # --- FIN: Añadir lógica --
+
     html_string = render_to_string('inventarioapp/entrega/resumen_pdf.html', {
         'entrega': entrega,
-        'ambientes': ambientes
+        'ambientes': ambientes,
+        'inmobiliaria': inmobiliaria, # <-- Pasar la inmobiliaria al contexto
+        'nombre_mes': nombre_mes,     # <-- Pasar nombre del mes
+        'dia_letras': dia_letras,     # <-- Pasar día en letras
+        'anio_letras': anio_letras,     # <-- Pasar año en letras
     })
 
     pdf_file = BytesIO()
@@ -614,8 +605,8 @@ def formulario_captacion_dinamico(request, relacion_id):
                             valor_booleano=value
                         )
             # 3. Redirigir a una vista de éxito, detalle, o lo que prefieras
-            propiedad_id = captacion.propiedad_cliente.propiedad.id
-            return redirect('core_inmobiliario:detalle_propiedad', id=propiedad_id)
+            messages.success(request, "Formulario de captación creado. Por favor, procede a firmarlo.")
+            return redirect('inventarioapp:resumen_formulario_captacion', captacion_id=captacion.id)
     else:
         form = FormularioCaptacionDinamico()
     secciones_fields = []

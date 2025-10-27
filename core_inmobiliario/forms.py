@@ -51,4 +51,17 @@ class AgregarPropiedadClienteForm(forms.ModelForm):
                 inmobiliaria=propiedad.inmobiliaria
             )
 
-
+class CuentaBancariaForm(forms.ModelForm):
+    class Meta:
+        model = CuentaBancaria
+        # Excluimos 'cliente' porque se asignará automáticamente en la vista
+        # Excluimos 'es_predeterminada' por ahora para simplificar, se puede añadir luego
+        fields = ['nombre_banco', 'tipo_cuenta', 'numero_cuenta', 'nombre_titular', 'identificacion_titular']
+        widgets = {
+            # Opcional: añadir clases CSS de Bootstrap si usas widget_tweaks o similar
+            'nombre_banco': forms.TextInput(attrs={'class': 'form-control'}),
+            'tipo_cuenta': forms.Select(attrs={'class': 'form-select'}),
+            'numero_cuenta': forms.TextInput(attrs={'class': 'form-control'}),
+            'nombre_titular': forms.TextInput(attrs={'class': 'form-control'}),
+            'identificacion_titular': forms.TextInput(attrs={'class': 'form-control'}),
+        }

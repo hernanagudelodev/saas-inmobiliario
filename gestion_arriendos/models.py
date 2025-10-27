@@ -1,3 +1,4 @@
+from decimal import Decimal
 import locale
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -162,6 +163,11 @@ class BaseContrato(models.Model):
     creado = models.DateTimeField(auto_now_add=True)
     actualizado = models.DateTimeField(auto_now=True)
 
+    es_contrato_migrado = models.BooleanField(
+        default=False,
+        help_text="Marcar si este contrato fue creado antes de usar el sistema (omite validaciones iniciales como captación/entrega)."
+    )
+
     @property
     def get_uso_inmueble_legible(self):
         """
@@ -183,29 +189,64 @@ class BaseContrato(models.Model):
         """
         raise NotImplementedError("Las clases hijas deben implementar 'primera_vigencia'")
 
+    # @property
+    # def valor_canon(self):
+    #     """Devuelve el valor del canon numérico desde la vigencia."""
+    #     vigencia = self.primera_vigencia
+    #     if vigencia is None:
+    #         return "(Pendiente por definir en Contrato de Arrendamiento)"
+    #     else:
+    #         return vigencia.valor_canon
+    
     @property
     def valor_canon(self):
-        """Devuelve el valor del canon numérico desde la vigencia."""
         vigencia = self.primera_vigencia
         if vigencia is None:
-            return "(Pendiente por definir en Contrato de Arrendamiento)"
+            # Devolvemos None en lugar del string para facilitar la comprobación
+            return None
         else:
             return vigencia.valor_canon
+
+    # @property
+    # def valor_canon_formateado(self):
+    #     """Devuelve el canon con formato de moneda colombiana."""
+    #     valor = self.valor_canon
+    #     try:
+    #         return locale.currency(valor, grouping=True, symbol='$ ')
+    #     except:
+    #         return f"$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
     @property
     def valor_canon_formateado(self):
         """Devuelve el canon con formato de moneda colombiana."""
-        valor = self.valor_canon
+        valor = self.valor_canon # Obtiene el valor (puede ser Decimal o None)
+
+        # --- INICIO: Verificación añadida ---
+        # Si valor es None (porque no hay vigencia), devolvemos el texto pendiente
+        if valor is None:
+            return "(Pendiente por definir en Contrato de Arrendamiento)"
+        # --- FIN: Verificación añadida ---
+
+        # Si valor SÍ es un número (Decimal), intentamos formatearlo
         try:
+            # Asegurarse que locale está configurado (puede necesitar configuración global)
+            # locale.setlocale(locale.LC_ALL, 'es_CO.UTF-8') # O 'es-CO'
             return locale.currency(valor, grouping=True, symbol='$ ')
-        except:
-            return f"$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        except Exception: # Captura errores de locale o de formato
+            # Fallback manual si locale falla
+            try:
+                 # Asegurarse que valor sea numérico antes de formatear
+                 valor_numeric = Decimal(valor)
+                 return f"$ {valor_numeric:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            except:
+                 # Si todo falla, devolver el valor original como string
+                 return str(valor)
 
     @property
     def valor_canon_en_letras(self):
         """Devuelve el canon en letras con formato de título, manejando el tipo Decimal."""
         valor = self.valor_canon
-        if not valor or valor == 0:
+        if valor is None or valor == 0: # Comprobación ajustada a None
             return "Cero"
         try:
             # --- LA CORRECCIÓN CLAVE ---

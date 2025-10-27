@@ -5,14 +5,14 @@ from .models import *
 from django.db.models import Q
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from .forms import *
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from usuarios.mixins import TenantRequiredMixin
 from inventarioapp.models import *
 from gestion_arriendos.models import ContratoMandato, ContratoArrendamiento
-
+from django.http import HttpResponseRedirect # Necesario para redirigir en POST
 
 
 
@@ -101,11 +101,49 @@ class EliminarCliente(TenantRequiredMixin, ClienteBaseView, DeleteView):
     success_url = reverse_lazy('core_inmobiliario:lista_clientes')
     template_name = "core_inmobiliario/clientes/borrar_cliente.html"
 
-class DetalleCliente(TenantRequiredMixin, ClienteBaseView, DetailView):
+class DetalleCliente(TenantRequiredMixin, ClienteBaseView, DetailView): # Mantén tus mixins
     model = Cliente
-    fields = '__all__'
-    success_url = reverse_lazy('core_inmobiliario:lista_clientes')
+    # fields = '__all__' # Ya no se necesita si usas template_name
+    # success_url = reverse_lazy('core_inmobiliario:lista_clientes') # No aplica directamente aquí
     template_name = "core_inmobiliario/clientes/detalle_cliente.html"
+    context_object_name = 'cliente' # Define el nombre del objeto cliente en la plantilla
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        cliente = self.get_object() # Obtiene el cliente actual
+        # Añade la lista de cuentas bancarias del cliente
+        context['cuentas_bancarias'] = cliente.cuentas_bancarias.all()
+        # Añade una instancia vacía del formulario para crear nuevas cuentas
+        # Solo añade el formulario si no viene uno con errores del método POST
+        if 'cuenta_form' not in context:
+            context['cuenta_form'] = CuentaBancariaForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        # Necesitamos obtener el cliente al que pertenece esta vista de detalle
+        self.object = self.get_object()
+        # Creamos una instancia del formulario con los datos del POST
+        form = CuentaBancariaForm(request.POST)
+
+        if form.is_valid():
+            # Creamos la cuenta pero no la guardamos aún (commit=False)
+            nueva_cuenta = form.save(commit=False)
+            # Asignamos el cliente actual a la nueva cuenta
+            nueva_cuenta.cliente = self.object
+            # Ahora sí guardamos la cuenta en la base de datos
+            nueva_cuenta.save()
+            messages.success(request, "Cuenta bancaria agregada exitosamente.")
+            # Redirigimos a la misma página de detalle del cliente (GET request)
+            return HttpResponseRedirect(reverse('core_inmobiliario:detalle_cliente', kwargs={'pk': self.object.pk}))
+        else:
+            # Si el formulario no es válido, volvemos a renderizar la página
+            # pero esta vez pasamos el formulario con los errores.
+            # Usamos get_context_data para obtener el contexto base (detalles del cliente, etc.)
+            context = self.get_context_data(object=self.object)
+            # Añadimos el formulario inválido al contexto para mostrar los errores
+            context['cuenta_form'] = form
+            # Renderizamos la plantilla con el contexto actualizado
+            return self.render_to_response(context)
 
     
 
@@ -240,6 +278,13 @@ def detalle_propiedad(request, id):
         is_firmado=True
     ).order_by('-fecha_firma').first()
 
+    # --- Buscar captaciones pendientes ---
+    captaciones_pendientes = FormularioCaptacion.objects.filter(
+        propiedad_cliente__propiedad=propiedad,
+        is_firmado=False # <-- Buscar las NO firmadas
+    ).order_by('-creado') # Ordenar por fecha de creación, más reciente primero
+    # ----------------------------------------
+
     # 2. Etapa de Contratación: Buscamos los contratos asociados a esta propiedad
     contrato_mandato = ContratoMandato.objects.filter(propiedad=propiedad).first()
     contrato_arrendamiento = ContratoArrendamiento.objects.filter(propiedad=propiedad).first() # Asumimos uno por ahora
@@ -258,6 +303,7 @@ def detalle_propiedad(request, id):
         'propiedad': propiedad,
         'captacion_firmada': captacion_firmada,
         'contrato_mandato': contrato_mandato,
+        'captaciones_pendientes': captaciones_pendientes, # <-- Pasar las pendientes
         'contrato_arrendamiento': contrato_arrendamiento,
         'entrega_firmada': entrega_firmada,
         'relaciones_clientes': relaciones_clientes, # <-- Pasamos la lista al contexto

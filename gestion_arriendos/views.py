@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.template import Context, Template, engines
 from django.views.generic import ListView, CreateView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from core_inmobiliario.models import Propiedad
+from core_inmobiliario.models import Propiedad, PropiedadCliente
 from inventarioapp.models import FormularioCaptacion
 from .models import ContratoMandato, PlantillaContrato, ContratoArrendamiento, VigenciaContrato
 from usuarios.mixins import TenantRequiredMixin
@@ -47,17 +47,38 @@ def crear_contrato_mandato(request, propiedad_id):
     inmobiliaria = request.user.profile.inmobiliaria
     propiedad = get_object_or_404(Propiedad, id=propiedad_id, inmobiliaria=inmobiliaria)
     
-    ultima_captacion = FormularioCaptacion.objects.filter(
-        propiedad_cliente__propiedad=propiedad,
-        is_firmado=True,
-        propiedad_cliente__relacion__in=['PR', 'AP']
-    ).order_by('-fecha_firma').first()
+    # Obtenemos el valor del checkbox ANTES de buscar la captación
+    es_migrado = request.POST.get('es_contrato_migrado') == 'on' if request.method == 'POST' else False
 
-    if not ultima_captacion:
-        messages.error(request, "No se puede crear un contrato. Primero debe existir una captación firmada con un propietario o apoderado.")
-        return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
-    
-    propietario = ultima_captacion.propiedad_cliente.cliente
+    propietario = None # Inicializamos propietario
+    ultima_captacion = None # Inicializamos ultima_captacion
+
+    # Solo buscamos la captación si NO es un contrato migrado
+    if not es_migrado:
+        ultima_captacion = FormularioCaptacion.objects.filter(
+            propiedad_cliente__propiedad=propiedad,
+            is_firmado=True,
+            propiedad_cliente__relacion__in=['PR', 'AP']
+        ).order_by('-fecha_firma').first()
+
+        if not ultima_captacion:
+            messages.error(request, "Para contratos nuevos, debe existir una captación firmada con un propietario o apoderado. Si es un contrato antiguo, marca la casilla 'Es un contrato existente (migrado)'.")
+            # Redirigimos al detalle de la propiedad, no al formulario directamente
+            return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
+        else:
+            propietario = ultima_captacion.propiedad_cliente.cliente
+    else:
+        # Si es migrado, necesitamos obtener el propietario de alguna manera.
+        # Asumimos que hay una relación 'PR' o 'AP' ya creada, aunque no haya captación.
+        # Buscamos la primera relación Propietario/Apoderado existente para la propiedad.
+        relacion_propietario = PropiedadCliente.objects.filter(
+            propiedad=propiedad,
+            relacion__in=['PR', 'AP']
+        ).first()
+        if not relacion_propietario:
+             messages.error(request, "No se encontró un Propietario o Apoderado asociado a esta propiedad para crear el contrato migrado.")
+             return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
+        propietario = relacion_propietario.cliente
 
     if request.method == 'POST':
         # CORRECCIÓN: Ahora pasamos 'propietario' también en el POST

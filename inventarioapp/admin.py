@@ -45,3 +45,19 @@ class FormularioEntregaAdmin(admin.ModelAdmin):
 class AmbienteEntregaAdmin(admin.ModelAdmin):
     list_display = ('formulario_entrega', 'tipo_ambiente', 'numero_ambiente')
     inlines = [ItemEntregaInline]
+
+
+class ValorCampoCaptacionInline(admin.TabularInline):
+    model = ValorCampoCaptacion
+    extra = 0 # No mostrar filas vacías por defecto
+    # Opcional: define qué campos mostrar y si son editables
+    fields = ('campo', 'valor_texto', 'valor_numero', 'valor_booleano')
+    readonly_fields = ('campo',) # Generalmente no querrás cambiar el campo asociado aquí
+
+@admin.register(FormularioCaptacion)
+class FormularioCaptacionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'propiedad', 'cliente', 'tipo_captacion', 'fecha', 'is_firmado', 'creado')
+    list_filter = ('propiedad_cliente__propiedad', 'propiedad_cliente__cliente', 'tipo_captacion', 'is_firmado')
+    search_fields = ('propiedad_cliente__propiedad__direccion', 'propiedad_cliente__cliente__nombre')
+    readonly_fields = ('fecha', 'creado', 'fecha_firma') # Campos no editables
+    inlines = [ValorCampoCaptacionInline] # Añade los valores como inline

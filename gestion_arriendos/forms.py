@@ -18,6 +18,13 @@ class ContratoMandatoForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
+    es_contrato_migrado = forms.BooleanField(
+        required=False, # No es obligatorio marcarlo
+        label="¿Es un contrato existente (migrado)?",
+        help_text="Marcar si este contrato ya existía antes de usar el sistema. Omitirá la validación de Captación.",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
     class Meta:
         model = ContratoMandato
         fields = [
@@ -34,6 +41,7 @@ class ContratoMandatoForm(forms.ModelForm):
             'inmobiliaria_paga_administracion',
             'observaciones',
             'clausulas_adicionales',
+            'es_contrato_migrado',
         ]
         widgets = {
             'periodicidad': forms.Select(attrs={'class': 'form-select'}),
@@ -113,6 +121,15 @@ class ContratoArrendamientoForm(forms.ModelForm):
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
     )
 
+    # --- Checkbox añadido ---
+    es_contrato_migrado = forms.BooleanField(
+        required=False,
+        label="¿Es un contrato existente (migrado)?",
+        help_text="Marcar si este contrato ya existía antes de usar el sistema. Omitirá validaciones iniciales.",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    # -----------------------
+
     class Meta:
         model = ContratoArrendamiento
         # Añadimos 'codeudores' a la lista de campos
@@ -128,6 +145,7 @@ class ContratoArrendamientoForm(forms.ModelForm):
             'prorrateado',
             'observaciones',
             'clausulas_adicionales',
+            'es_contrato_migrado', # <-- Añadido a la lista de fields
         ]
         widgets = {
             'periodicidad': forms.Select(attrs={'class': 'form-select'}),

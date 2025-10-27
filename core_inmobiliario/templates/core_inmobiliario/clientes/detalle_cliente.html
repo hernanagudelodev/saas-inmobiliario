@@ -1,11 +1,23 @@
 {% extends "base.html" %}
+{% load widget_tweaks %} {# Asegúrate de cargar widget_tweaks si lo usas para las clases CSS #}
 
 {% block title %}Detalle de Cliente{% endblock %}
 
 {% block content %}
-  <div class="card mx-auto" style="max-width:600px;">
-    <div class="card-header bg-primary text-white">
+<div class="container" style="max-width: 800px;"> {# Ampliamos un poco el contenedor #}
+  {# --- Detalles del Cliente (Card Principal) --- #}
+  <div class="card shadow-sm mt-4 mb-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
       <h3 class="mb-0"><i class="bi bi-person"></i> {{ cliente.nombre }}</h3>
+      {# Botones de acción para el cliente #}
+      <div>
+        <a href="{% url 'core_inmobiliario:actualizar_cliente' cliente.id %}" class="btn btn-outline-light btn-sm me-1">
+          <i class="bi bi-pencil"></i> Editar Cliente
+        </a>
+        <a href="{% url 'core_inmobiliario:eliminar_cliente' cliente.id %}" class="btn btn-outline-danger btn-sm">
+          <i class="bi bi-trash"></i> Eliminar Cliente
+        </a>
+      </div>
     </div>
     <div class="card-body">
       <ul class="list-group list-group-flush mb-3">
@@ -22,17 +34,70 @@
           <strong>Correo Electrónico:</strong> {{ cliente.email|default:"–" }}
         </li>
       </ul>
-      <div class="d-flex gap-2 mb-3">
-        <a href="{% url 'core_inmobiliario:actualizar_cliente' cliente.id %}" class="btn btn-outline-primary">
-          <i class="bi bi-pencil"></i> Actualizar
-        </a>
-        <a href="{% url 'core_inmobiliario:eliminar_cliente' cliente.id %}" class="btn btn-outline-danger">
-          <i class="bi bi-trash"></i> Eliminar
-        </a>
-      </div>
       <a href="{% url 'core_inmobiliario:lista_clientes' %}" class="btn btn-link ps-0">
         <i class="bi bi-arrow-left"></i> Volver a la lista de Clientes
       </a>
     </div>
   </div>
+
+  {# --- Sección de Cuentas Bancarias --- #}
+  <div class="card shadow-sm mt-4">
+    <div class="card-header">
+      <h4 class="mb-0"><i class="bi bi-bank"></i> Cuentas Bancarias</h4>
+    </div>
+    <div class="card-body">
+      {# --- Lista de Cuentas Existentes --- #}
+      <h5 class="mb-3">Cuentas Registradas</h5>
+      {% if cuentas_bancarias %}
+        <ul class="list-group mb-4">
+          {% for cuenta in cuentas_bancarias %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <strong>{{ cuenta.nombre_banco }}</strong> - {{ cuenta.get_tipo_cuenta_display }}
+                <br>
+                <small class="text-muted">N°: ****{{ cuenta.numero_cuenta|slice:"-4:" }} | Titular: {{ cuenta.nombre_titular|default:cliente.nombre }}</small>
+              </div>
+              <div>
+                {# Opcional: Añadir botones para Editar/Eliminar cuenta aquí en el futuro #}
+                <a href="#" class="btn btn-sm btn-outline-secondary disabled">Editar</a>
+                <a href="#" class="btn btn-sm btn-outline-danger disabled">Eliminar</a>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="alert alert-info">Este cliente aún no tiene cuentas bancarias registradas.</div>
+      {% endif %}
+
+      {# --- Formulario para Añadir Nueva Cuenta --- #}
+      <h5 class="mb-3 border-top pt-3">Agregar Nueva Cuenta Bancaria</h5>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="row">
+          {# Iteramos sobre los campos visibles del formulario de cuenta #}
+          {% for field in cuenta_form.visible_fields %}
+            <div class="col-md-6 mb-3">
+              <label for="{{ field.id_for_label }}" class="form-label fw-bold">{{ field.label }}</label>
+              {# Usamos widget_tweaks si está disponible, si no, solo renderizamos el campo #}
+              {% if field|widget_type == 'select' %}
+                {{ field|add_class:"form-select" }}
+              {% else %}
+                 {{ field|add_class:"form-control" }}
+              {% endif %}
+              {% if field.help_text %}
+                <div class="form-text">{{ field.help_text }}</div>
+              {% endif %}
+              {% if field.errors %}
+                <div class="text-danger small">{{ field.errors|striptags }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-success">
+          <i class="bi bi-plus-circle"></i> Agregar Cuenta
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
