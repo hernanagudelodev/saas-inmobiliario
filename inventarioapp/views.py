@@ -147,24 +147,18 @@ def home(request):
 def crear_formulario_entrega(request, propiedad_id):
     propiedad = get_object_or_404(Propiedad, id=propiedad_id)
 
-    existe_mandato_migrado = ContratoMandato.objects.filter(
-        propiedad=propiedad,
-        es_contrato_migrado=True
+    captacion_firmada = FormularioCaptacion.objects.filter(
+        propiedad_cliente__propiedad=propiedad,
+        is_firmado=True
     ).exists()
-
-    # Solo validamos la existencia de captación firmada si NO hay un mandato migrado.
-    if not existe_mandato_migrado:
-        captacion_firmada = FormularioCaptacion.objects.filter(
-            propiedad_cliente__propiedad=propiedad,
-            is_firmado=True
-        ).exists()
-        if not captacion_firmada:
-            messages.error(
-                request,
-                "No se puede crear un formulario de entrega: debe existir una captación firmada para esta propiedad o un contrato de mandato marcado como 'migrado'."
-            )
-            # Redirigimos al detalle de la propiedad
-            return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
+    
+    if not captacion_firmada:
+        messages.error(
+            request,
+            "No se puede crear un formulario de entrega: no existe una captación firmada para esta propiedad."
+        )
+        # Redirigimos al detalle de la propiedad
+        return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
 
     if request.method == 'POST':
         form = SeleccionarPropiedadClienteForm(request.POST, propiedad=propiedad)

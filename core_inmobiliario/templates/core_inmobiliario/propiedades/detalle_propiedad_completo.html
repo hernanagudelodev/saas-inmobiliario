@@ -65,94 +65,94 @@
 </div>
 
   <div class="card shadow-sm">
-    <div class="card-header">
-      <h4 class="mb-0"><i class="bi bi-clipboard2-data"></i> Estado del Proceso de Alquiler</h4>
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h4 class="mb-0"><i class="bi bi-clipboard2-data"></i> Estado del Proceso</h4>
+      {# Mostrar botón de migración solo si NO hay un contrato de mandato vigente #}
+      {% if not contrato_mandato or contrato_mandato.estado != 'VIGENTE' %}
+        <a href="{% url 'gestion_arriendos:registrar_contrato_existente' propiedad.id %}" class="btn btn-sm btn-success">
+           <i class="bi bi-file-earmark-arrow-up"></i> Registrar Contrato Existente (Migrar)
+        </a>
+      {% endif %}
     </div>
     <div class="card-body">
-
-      {# --- Etapa 1: Captación (MODIFICADO) --- #}
-      {# ... (Bloque if contrato_mandato and contrato_mandato.es_contrato_migrado sin cambios) ... #}
+      {# --- Etapa 1: Captación --- #}
       {% if contrato_mandato and contrato_mandato.es_contrato_migrado %}
-         {# ... código omitido ... #}
+        {# CASO 1: Contrato migrado -> Etapa omitida visualmente #}
+        <div class="mb-3 p-3 border rounded border-secondary bg-light">
+          <h5><i class="bi bi-skip-forward-fill text-secondary"></i> Etapa 1: Captación Omitida</h5>
+          <p class="mb-1 text-muted">Esta etapa se omitió porque el contrato fue registrado como existente (migrado).</p>
+        </div>
       {% else %}
-        {# Lógica original si no es migrado #}
+        {# CASO 2: Flujo normal -> Muestra estados de captación #}
         <div class="mb-3 p-3 border rounded {% if captacion_firmada %}border-success bg-success-subtle{% elif captaciones_pendientes %}border-warning bg-warning-subtle{% else %}border-secondary bg-light{% endif %}">
           <h5>
             {% if captacion_firmada %}
               <i class="bi bi-check-circle-fill text-success"></i> Etapa 1: Captación Completada
-            {% elif captaciones_pendientes %} {# Si hay pendientes #}
+            {% elif captaciones_pendientes %}
               <i class="bi bi-exclamation-triangle-fill text-warning"></i> Etapa 1: Captación Pendiente de Firma
-            {% else %} {# Si no hay firmada ni pendientes #}
+            {% else %}
                <i class="bi bi-pencil-square text-secondary"></i> Etapa 1: Captación Sin Iniciar
             {% endif %}
           </h5>
+          
           {% if captacion_firmada %}
             <p class="mb-1">La propiedad ya cuenta con un inventario de captación firmado. Ya puedes proceder a crear los contratos.</p>
             <a href="{% url 'inventarioapp:resumen_formulario_captacion' captacion_firmada.id %}" class="btn btn-sm btn-outline-secondary">Ver Captación Firmada</a>
-          {# --- INICIO: Mostrar captaciones pendientes --- #}
+          
           {% elif captaciones_pendientes %}
             <p class="mb-1">Hay formularios de captación pendientes de firma. Selecciona uno para continuar:</p>
             <ul class="list-unstyled mb-2">
               {% for cap_pendiente in captaciones_pendientes %}
               <li class="d-flex justify-content-between align-items-center mb-1">
                 <span>Captación del {{ cap_pendiente.creado|date:"d/m/Y" }} (Cliente: {{ cap_pendiente.cliente }})</span>
-                <a href="{% url 'inventarioapp:resumen_formulario_captacion' cap_pendiente.id %}" class="btn btn-sm btn-warning ms-2">
-                  <i class="bi bi-pen"></i> Firmar y Enviar
-                </a>
-                {# Opcional: Botón para editar si aún no se ha firmado #}
-                <a href="{% url 'inventarioapp:editar_captacion' cap_pendiente.id %}" class="btn btn-sm btn-outline-secondary ms-1">Editar</a>
-                {# Opcional: Botón para eliminar borrador #}
-                 <a href="{% url 'inventarioapp:eliminar_captacion' cap_pendiente.id %}" class="btn btn-sm btn-outline-danger ms-1">Eliminar</a>
+                <div>
+                  <a href="{% url 'inventarioapp:resumen_formulario_captacion' cap_pendiente.id %}" class="btn btn-sm btn-warning ms-2"><i class="bi bi-pen"></i> Firmar</a>
+                  <a href="{% url 'inventarioapp:editar_captacion' cap_pendiente.id %}" class="btn btn-sm btn-outline-secondary ms-1">Editar</a>
+                  <a href="{% url 'inventarioapp:eliminar_captacion' cap_pendiente.id %}" class="btn btn-sm btn-outline-danger ms-1">Eliminar</a>
+                </div>
               </li>
               {% endfor %}
             </ul>
              <p class="mt-2 mb-1">O puedes crear una nueva captación:</p>
              <a href="{% url 'inventarioapp:crear_captacion' propiedad.id %}" class="btn btn-sm btn-primary">Crear Nueva Captación</a>
-          {# --- FIN: Mostrar captaciones pendientes --- #}
-          {% else %} {# Si no hay firmada ni pendientes #}
+          
+          {% else %} 
+            {# Ni firmada ni pendiente #}
             <p class="mb-1">El primer paso es registrar el inventario de captación y obtener la firma del propietario. Sin este paso, no se puede continuar.</p>
             <a href="{% url 'inventarioapp:crear_captacion' propiedad.id %}" class="btn btn-sm btn-primary">Crear Nueva Captación</a>
           {% endif %}
         </div>
-      {% endif %} {# Fin lógica Etapa 1 #}
+      {% endif %}
 
 
-      {# --- Etapa 2: Contratación (MODIFICADO) --- #}
-      {# Solo se muestra si la captación está completa O si el mandato es migrado #}
+      {# --- Etapa 2: Contratación --- #}
       {% if captacion_firmada or contrato_mandato and contrato_mandato.es_contrato_migrado %}
         <div class="mb-3 p-3 border rounded {% if contrato_mandato.estado == 'VIGENTE' and contrato_arrendamiento.estado == 'VIGENTE' %}border-success bg-success-subtle{% else %}border-primary bg-primary-subtle{% endif %}">
            <h5>
-            {# ... (Lógica interna de estado de Etapa 2 sin cambios) ... #}
             {% if contrato_mandato.estado == 'VIGENTE' and contrato_arrendamiento.estado == 'VIGENTE' %}
               <i class="bi bi-check-circle-fill text-success"></i> Etapa 2: Contratación Completada
             {% else %}
               <i class="bi bi-pencil-square text-primary"></i> Etapa 2: Contratación en Proceso
             {% endif %}
           </h5>
-          {# ... (Resto de la lógica interna de Etapa 2: botones crear/ver contratos, enviar a firmas, etc. sin cambios) ... #}
+          
            {% if not contrato_mandato %}
             <p>El siguiente paso es crear el Contrato de Mandato con el propietario.</p>
             <a href="{% url 'gestion_arriendos:crear_contrato_mandato' propiedad.id %}" class="btn btn-sm btn-primary">Crear Contrato de Mandato</a>
 
           {% elif contrato_mandato and not contrato_arrendamiento %}
-             {# ... (lógica sin cambios) ... #}
              <p class="mb-2">Ya existe un Contrato de Mandato ({% if contrato_mandato.estado == 'BORRADOR'%}en borrador{% else %}{{ contrato_mandato.get_estado_display }}{% endif %}). Puedes revisarlo o proceder a crear el Contrato de Arrendamiento.</p>
             <ul class="list-unstyled mb-2">
               <li>
                 <strong>Contrato de Mandato:</strong> {{ contrato_mandato.get_estado_display }}
-                <a href="{% url 'gestion_arriendos:detalle_contrato_mandato' contrato_mandato.id %}" class="ms-2">
-                  <i class="bi bi-eye"></i> Ver Detalle
-                </a>
+                <a href="{% url 'gestion_arriendos:detalle_contrato_mandato' contrato_mandato.id %}" class="ms-2"><i class="bi bi-eye"></i> Ver Detalle</a>
               </li>
             </ul>
              {% if contrato_mandato.estado != 'VIGENTE' %}
-                <a href="{% url 'gestion_arriendos:crear_contrato_arrendamiento' contrato_mandato.id %}" class="btn btn-sm btn-primary">
-                Crear Contrato de Arrendamiento
-                </a>
+                <a href="{% url 'gestion_arriendos:crear_contrato_arrendamiento' contrato_mandato.id %}" class="btn btn-sm btn-primary">Crear Contrato de Arrendamiento</a>
             {% endif %}
 
           {% elif contrato_mandato and contrato_arrendamiento %}
-             {# ... (lógica sin cambios) ... #}
              <p>Ambos contratos han sido creados. Revisa sus estados y procede con la siguiente acción.</p>
             <ul class="list-unstyled">
               <li><strong>Contrato de Mandato:</strong> {{ contrato_mandato.get_estado_display }} <a href="{% url 'gestion_arriendos:detalle_contrato_mandato' contrato_mandato.id %}" class="ms-2">Ver Detalle</a></li>
@@ -160,36 +160,30 @@
             </ul>
 
             {% if contrato_mandato.estado == 'BORRADOR' and contrato_arrendamiento.estado == 'BORRADOR' %}
-              <a href="{% url 'gestion_arriendos:enviar_ciclo_a_firmas' propiedad.id %}" class="btn btn-sm btn-success">
-                  <i class="bi bi-send"></i> Enviar a Firmas
-              </a>
+              <a href="{% url 'gestion_arriendos:enviar_ciclo_a_firmas' propiedad.id %}" class="btn btn-sm btn-success"><i class="bi bi-send"></i> Enviar a Firmas</a>
               <div class="mt-3">
-                  <a href="{% url 'gestion_arriendos:eliminar_proceso_borrador' propiedad.id %}" class="btn btn-sm btn-outline-danger">
-                      <i class="bi bi-trash"></i> Eliminar Proceso en Borrador
-                  </a>
+                  <a href="{% url 'gestion_arriendos:eliminar_proceso_borrador' propiedad.id %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Eliminar Proceso en Borrador</a>
               </div>
             {% elif contrato_mandato.estado == 'EN_FIRMAS' or contrato_arrendamiento.estado == 'EN_FIRMAS' %}
-               {# Si alguno está en firmas, no se puede revertir ni enviar de nuevo #}
               <span class="badge bg-info text-dark">Proceso en firmas. Sube los documentos firmados desde el detalle de cada contrato.</span>
              {% elif contrato_mandato.estado == 'VIGENTE' and contrato_arrendamiento.estado == 'VIGENTE' %}
                 <span class="badge bg-success">Contratos Vigentes</span>
-            {% endif %} {# Cierra el if/elif/elif de los estados BORRADOR/EN_FIRMAS/VIGENTE #}
-          {% endif %} {# Cierra el if/elif/elif principal: not mandato / mandato and not arrend / mandato and arrend #}
-        </div> {# Cierra el div del borde redondeado de la Etapa 2 #}
-      {% endif %} {# Fin if Etapa 2 #}
+            {% endif %}
+          {% endif %}
+        </div>
+      {% endif %}
 
 
-      {# --- Etapa 3: Inventario de Entrega (MODIFICADO) --- #}
-      {# Solo se muestra si AMBOS contratos están VIGENTES #}
+      {# --- Etapa 3: Inventario de Entrega --- #}
       {% if contrato_mandato.estado == 'VIGENTE' and contrato_arrendamiento.estado == 'VIGENTE' %}
-        {# Mostramos estado omitido si el contrato de arrendamiento es migrado #}
         {% if contrato_arrendamiento and contrato_arrendamiento.es_contrato_migrado %}
+          {# CASO 1: Contrato migrado -> Etapa omitida visualmente #}
           <div class="p-3 border rounded border-secondary bg-light">
             <h5><i class="bi bi-skip-forward-fill text-secondary"></i> Etapa 3: Entrega Omitida</h5>
-            <p class="mb-1 text-muted">Esta etapa se omitió porque el contrato fue marcado como existente (migrado).</p>
+            <p class="mb-1 text-muted">Esta etapa se omitió porque el contrato fue registrado como existente (migrado).</p>
           </div>
         {% else %}
-          {# Lógica original si no es migrado #}
+          {# CASO 2: Flujo normal #}
           <div class="p-3 border rounded {% if entrega_firmada %}border-success bg-success-subtle{% else %}border-danger bg-danger-subtle{% endif %}">
             <h5>
               {% if entrega_firmada %}
@@ -210,8 +204,8 @@
               </a>
             {% endif %}
           </div>
-        {% endif %} {# Fin if/else contrato_arrendamiento.es_contrato_migrado #}
-      {% endif %} {# Fin if contratos VIGENTES #}
+        {% endif %} 
+      {% endif %}
     </div>
   </div>
 </div>

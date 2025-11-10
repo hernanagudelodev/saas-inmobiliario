@@ -18,13 +18,6 @@ class ContratoMandatoForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
-    es_contrato_migrado = forms.BooleanField(
-        required=False, # No es obligatorio marcarlo
-        label="¿Es un contrato existente (migrado)?",
-        help_text="Marcar si este contrato ya existía antes de usar el sistema. Omitirá la validación de Captación.",
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
-    )
-
     class Meta:
         model = ContratoMandato
         fields = [
@@ -41,7 +34,6 @@ class ContratoMandatoForm(forms.ModelForm):
             'inmobiliaria_paga_administracion',
             'observaciones',
             'clausulas_adicionales',
-            'es_contrato_migrado',
         ]
         widgets = {
             'periodicidad': forms.Select(attrs={'class': 'form-select'}),
@@ -121,15 +113,6 @@ class ContratoArrendamientoForm(forms.ModelForm):
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
     )
 
-    # --- Checkbox añadido ---
-    es_contrato_migrado = forms.BooleanField(
-        required=False,
-        label="¿Es un contrato existente (migrado)?",
-        help_text="Marcar si este contrato ya existía antes de usar el sistema. Omitirá validaciones iniciales.",
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
-    )
-    # -----------------------
-
     class Meta:
         model = ContratoArrendamiento
         # Añadimos 'codeudores' a la lista de campos
@@ -145,7 +128,6 @@ class ContratoArrendamientoForm(forms.ModelForm):
             'prorrateado',
             'observaciones',
             'clausulas_adicionales',
-            'es_contrato_migrado', # <-- Añadido a la lista de fields
         ]
         widgets = {
             'periodicidad': forms.Select(attrs={'class': 'form-select'}),
@@ -198,3 +180,118 @@ class SubirArrendamientoFirmadoForm(forms.ModelForm):
             'archivo_pdf_firmado': forms.FileInput(attrs={'class': 'form-control'})
         }
 
+class RegistrarContratoExistenteForm(forms.Form):
+    """
+    Formulario para registrar un contrato existente (migrado) directamente 
+    como VIGENTE, omitiendo los flujos de borrador y firma.
+    """
+    # --- Datos del Propietario/Mandato ---
+    propietario = forms.ModelChoiceField(
+        queryset=Cliente.objects.none(), # Se filtrará en __init__
+        label="Propietario Principal",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    cuenta_bancaria_pago = forms.ModelChoiceField(
+        queryset=CuentaBancaria.objects.none(), # Se filtrará en __init__
+        label="Cuenta bancaria para pagos",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    porcentaje_comision = forms.DecimalField(
+        label="Porcentaje Comisión (%)",
+        max_digits=5, decimal_places=2,
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+
+    # --- NUEVOS CAMPOS AÑADIDOS ---
+    periodicidad = forms.ChoiceField(
+        label="Periodicidad de Pago",
+        choices=ContratoMandato.Periodicidad.choices,
+        initial=ContratoMandato.Periodicidad.MENSUAL,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    uso_inmueble = forms.ChoiceField(
+        label="Uso del Inmueble",
+        choices=ContratoMandato.UsoInmueble.choices,
+        initial=ContratoMandato.UsoInmueble.VIVIENDA,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    # ------------------------------
+    
+    # --- Datos del Arrendatario/Arrendamiento ---
+    arrendatario = forms.ModelChoiceField(
+        queryset=Cliente.objects.none(), # Se filtrará en __init__
+        label="Arrendatario Principal",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    codeudores = forms.ModelMultipleChoiceField(
+        queryset=Cliente.objects.none(), # Se filtrará en __init__
+        label="Codeudores (Opcional)",
+        required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': '3'})
+    )
+    valor_canon = forms.DecimalField(
+        label="Valor Canon Actual",
+        max_digits=12, decimal_places=2,
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+    
+    # --- Datos de Vigencia (Comunes) ---
+    fecha_inicio_vigencia = forms.DateField(
+        label="Fecha Inicio Vigencia Actual",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+    fecha_fin_vigencia = forms.DateField(
+        label="Fecha Fin Vigencia Actual",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+    
+    # --- Documento (Opcional) ---
+    archivo_pdf_firmado = forms.FileField(
+        label="Subir PDF del contrato (Opcional)",
+        required=False,
+        widget=forms.FileInput(attrs={'class': 'form-control'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        # La vista debe pasar 'propiedad' e 'inmobiliaria'
+        propiedad = kwargs.pop('propiedad')
+        inmobiliaria = kwargs.pop('inmobiliaria')
+        
+        super().__init__(*args, **kwargs)
+        
+        # Filtrar Propietarios (PR o AP relacionados con la propiedad)
+        propietario_pks = PropiedadCliente.objects.filter(
+            propiedad=propiedad, relacion__in=['PR', 'AP']
+        ).values_list('cliente_id', flat=True)
+        self.fields['propietario'].queryset = Cliente.objects.filter(pk__in=propietario_pks)
+        
+        # Filtrar Arrendatarios (AR relacionados con la propiedad)
+        arrendatario_pks = PropiedadCliente.objects.filter(
+            propiedad=propiedad, relacion='AR'
+        ).values_list('cliente_id', flat=True)
+        self.fields['arrendatario'].queryset = Cliente.objects.filter(pk__in=arrendatario_pks)
+        
+        # Filtrar Codeudores (CO relacionados con la propiedad)
+        codeudor_pks = PropiedadCliente.objects.filter(
+            propiedad=propiedad, relacion='CO'
+        ).values_list('cliente_id', flat=True)
+        self.fields['codeudores'].queryset = Cliente.objects.filter(pk__in=codeudor_pks)
+        
+        # Filtrar Cuentas (Cualquier cuenta de la inmobiliaria)
+        # Nota: Idealmente se filtra por propietario con JS, pero esto es funcional.
+        self.fields['cuenta_bancaria_pago'].queryset = CuentaBancaria.objects.filter(
+            cliente__inmobiliaria=inmobiliaria
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        propietario = cleaned_data.get('propietario')
+        cuenta_bancaria_pago = cleaned_data.get('cuenta_bancaria_pago')
+
+        # Validar que la cuenta seleccionada pertenezca al propietario seleccionado
+        if propietario and cuenta_bancaria_pago:
+            if cuenta_bancaria_pago.cliente != propietario:
+                self.add_error('cuenta_bancaria_pago', 
+                               "Esta cuenta bancaria no pertenece al propietario seleccionado.")
+        
+        return cleaned_data

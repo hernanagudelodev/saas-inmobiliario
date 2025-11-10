@@ -26,6 +26,8 @@ urlpatterns = [
     path('ciclo/<int:propiedad_id>/eliminar-borrador/', views.eliminar_proceso_borrador, name='eliminar_proceso_borrador'),
     path('ciclo/<int:propiedad_id>/enviar-a-firmas/', views.enviar_ciclo_a_firmas, name='enviar_ciclo_a_firmas'),
 
+    path('contratos/registrar-existente/<int:propiedad_id>/',views.registrar_contrato_existente,name='registrar_contrato_existente'),
+
     path('plantillas/', views.ListaPlantillas.as_view(), name='lista_plantillas'),
     path('plantillas/crear/', views.CrearPlantilla.as_view(), name='crear_plantilla'),
 ]

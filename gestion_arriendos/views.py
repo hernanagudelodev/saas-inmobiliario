@@ -7,7 +7,7 @@ from core_inmobiliario.models import Propiedad, PropiedadCliente
 from inventarioapp.models import FormularioCaptacion
 from .models import ContratoMandato, PlantillaContrato, ContratoArrendamiento, VigenciaContrato
 from usuarios.mixins import TenantRequiredMixin
-from .forms import ContratoMandatoForm, PlantillaContratoForm,ContratoArrendamientoForm, SubirArrendamientoFirmadoForm, SubirMandatoFirmadoForm
+from .forms import ContratoMandatoForm, PlantillaContratoForm,ContratoArrendamientoForm, SubirArrendamientoFirmadoForm, SubirMandatoFirmadoForm,RegistrarContratoExistenteForm
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.template.loader import render_to_string
@@ -47,38 +47,17 @@ def crear_contrato_mandato(request, propiedad_id):
     inmobiliaria = request.user.profile.inmobiliaria
     propiedad = get_object_or_404(Propiedad, id=propiedad_id, inmobiliaria=inmobiliaria)
     
-    # Obtenemos el valor del checkbox ANTES de buscar la captación
-    es_migrado = request.POST.get('es_contrato_migrado') == 'on' if request.method == 'POST' else False
+    ultima_captacion = FormularioCaptacion.objects.filter(
+        propiedad_cliente__propiedad=propiedad,
+        is_firmado=True,
+        propiedad_cliente__relacion__in=['PR', 'AP']
+    ).order_by('-fecha_firma').first()
 
-    propietario = None # Inicializamos propietario
-    ultima_captacion = None # Inicializamos ultima_captacion
-
-    # Solo buscamos la captación si NO es un contrato migrado
-    if not es_migrado:
-        ultima_captacion = FormularioCaptacion.objects.filter(
-            propiedad_cliente__propiedad=propiedad,
-            is_firmado=True,
-            propiedad_cliente__relacion__in=['PR', 'AP']
-        ).order_by('-fecha_firma').first()
-
-        if not ultima_captacion:
-            messages.error(request, "Para contratos nuevos, debe existir una captación firmada con un propietario o apoderado. Si es un contrato antiguo, marca la casilla 'Es un contrato existente (migrado)'.")
-            # Redirigimos al detalle de la propiedad, no al formulario directamente
-            return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
-        else:
-            propietario = ultima_captacion.propiedad_cliente.cliente
-    else:
-        # Si es migrado, necesitamos obtener el propietario de alguna manera.
-        # Asumimos que hay una relación 'PR' o 'AP' ya creada, aunque no haya captación.
-        # Buscamos la primera relación Propietario/Apoderado existente para la propiedad.
-        relacion_propietario = PropiedadCliente.objects.filter(
-            propiedad=propiedad,
-            relacion__in=['PR', 'AP']
-        ).first()
-        if not relacion_propietario:
-             messages.error(request, "No se encontró un Propietario o Apoderado asociado a esta propiedad para crear el contrato migrado.")
-             return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
-        propietario = relacion_propietario.cliente
+    if not ultima_captacion:
+        messages.error(request, "No se puede crear un contrato. Primero debe existir una captación firmada con un propietario o apoderado.")
+        return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
+    
+    propietario = ultima_captacion.propiedad_cliente.cliente
 
     if request.method == 'POST':
         # CORRECCIÓN: Ahora pasamos 'propietario' también en el POST
@@ -582,6 +561,87 @@ def subir_arrendamiento_firmado(request, pk):
         # Si no es POST, no hacemos nada y redirigimos
         return redirect('gestion_arriendos:detalle_contrato_arrendamiento', pk=arrendamiento.pk)
 
+
+@login_required
+def registrar_contrato_existente(request, propiedad_id):
+    """
+    Vista para registrar un contrato existente (migrado) directamente como VIGENTE.
+    """
+    inmobiliaria = request.user.profile.inmobiliaria
+    propiedad = get_object_or_404(Propiedad, id=propiedad_id, inmobiliaria=inmobiliaria)
+
+    # Verificar que la propiedad no tenga ya contratos vigentes (opcional pero recomendado)
+    if ContratoMandato.objects.filter(propiedad=propiedad, estado='VIGENTE').exists():
+        messages.error(request, "Esta propiedad ya tiene un contrato de mandato vigente.")
+        return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
+
+    if request.method == 'POST':
+        form = RegistrarContratoExistenteForm(request.POST, request.FILES, 
+                                              propiedad=propiedad, 
+                                              inmobiliaria=inmobiliaria)
+        if form.is_valid():
+            data = form.cleaned_data
+            
+            # 1. Crear Contrato de Mandato
+            mandato = ContratoMandato.objects.create(
+                propiedad=propiedad,
+                propietario=data['propietario'],
+                inmobiliaria=inmobiliaria,
+                estado='VIGENTE',
+                es_contrato_migrado=True,
+                porcentaje_comision=data['porcentaje_comision'],
+                cuenta_bancaria_pago=data['cuenta_bancaria_pago'],
+                # --- USAR DATOS DEL FORMULARIO ---
+                periodicidad=data['periodicidad'],
+                uso_inmueble=data['uso_inmueble'],
+                # ---------------------------------
+            )
+            
+            # 2. Crear Contrato de Arrendamiento
+            arrendamiento = ContratoArrendamiento.objects.create(
+                contrato_mandato=mandato,
+                propiedad=propiedad,
+                arrendatario=data['arrendatario'],
+                inmobiliaria=inmobiliaria,
+                estado='VIGENTE',
+                es_contrato_migrado=True,
+                # --- USAR DATOS DEL FORMULARIO ---
+                periodicidad=data['periodicidad'], # Asumimos la misma para ambos
+                uso_inmueble=data['uso_inmueble'],
+                # ---------------------------------
+            )
+            # Añadir codeudores si existen
+            if data['codeudores']:
+                arrendamiento.codeudores.set(data['codeudores'])
+
+            # 3. Crear la primera Vigencia
+            VigenciaContrato.objects.create(
+                contrato_arrendamiento=arrendamiento,
+                tipo='INICIAL',
+                fecha_inicio=data['fecha_inicio_vigencia'],
+                fecha_fin=data['fecha_fin_vigencia'],
+                valor_canon=data['valor_canon']
+            )
+
+            # 4. Guardar PDF firmado si se subió
+            if data['archivo_pdf_firmado']:
+                mandato.archivo_pdf_firmado = data['archivo_pdf_firmado']
+                arrendamiento.archivo_pdf_firmado = data['archivo_pdf_firmado']
+                mandato.save()
+                arrendamiento.save()
+
+            messages.success(request, "Contrato existente registrado (migrado) exitosamente.")
+            return redirect('core_inmobiliario:detalle_propiedad', id=propiedad.id)
+    else:
+        # Petición GET: mostrar formulario vacío
+        form = RegistrarContratoExistenteForm(propiedad=propiedad, inmobiliaria=inmobiliaria)
+
+    context = {
+        'form': form,
+        'propiedad': propiedad,
+        'section': 'arriendos'
+    }
+    return render(request, 'gestion_arriendos/registrar_contrato_existente.html', context)
 
 # --- Plantillas contratos ---
 
